@@ -1,6 +1,6 @@
 # OpenCommit
 
-Free Conventional Commits generator for VS Code, powered by OpenRouter.
+VSCode Extension for generating commit messages based on Conventional Commits specification, powered by OpenRouter API.
 
 ## Features
 
