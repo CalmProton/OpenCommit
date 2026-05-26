@@ -1,6 +1,6 @@
 # OpenCommit
 
-Free AI commit message copilot for VS Code, powered by OpenRouter and the Conventional Commits specification.
+Free Conventional Commits generator for VS Code, powered by OpenRouter.
 
 ## Features
 
@@ -15,7 +15,7 @@ Free AI commit message copilot for VS Code, powered by OpenRouter and the Conven
 
 ## Commands
 
-- `OpenCommit: Generate Commit Message`
+- `OpenCommit: Generate`
 - `OpenCommit: Set OpenRouter API Key`
 - `OpenCommit: Clear OpenRouter API Key`
 
@@ -45,9 +45,13 @@ Do not store API keys in workspace settings. Run `OpenCommit: Set OpenRouter API
 
 The extension disables reasoning tokens by default because commit messages do not need hidden reasoning budgets. If OpenRouter still returns no message content, try increasing `aiCommitMsg.maxOutputTokens` or choose a concrete non-reasoning model instead of `openrouter/auto`.
 
+## Conventional Commits
+
+OpenCommit follows the [Conventional Commits 1.0.0 specification](https://www.conventionalcommits.org/en/v1.0.0/). The source for the specification is maintained in the [conventional-commits/conventionalcommits.org](https://github.com/conventional-commits/conventionalcommits.org) GitHub repository.
+
 ## Privacy
 
-OpenCommit reads Git diffs from the selected repository only when you run `OpenCommit: Generate Commit Message`. The diff and prompt are sent to the configured OpenRouter API endpoint to generate the commit message. Your OpenRouter API key is stored in VS Code SecretStorage and is not written to workspace settings.
+OpenCommit reads Git diffs from the selected repository only when you run `OpenCommit: Generate`. The diff and prompt are sent to the configured OpenRouter API endpoint to generate the commit message. Your OpenRouter API key is stored in VS Code SecretStorage and is not written to workspace settings.
 
 ## Large Changes
 
