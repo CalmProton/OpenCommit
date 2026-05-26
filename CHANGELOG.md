@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.0
+
+- Publish the first stable release.
+- License the project under MIT.
+- Remove redundant command activation events from the extension manifest.
+- Explicitly include Node and VS Code typings in the TypeScript project configuration.
+
 ## 0.0.6
 
 - Use structured XML prompts with a strict JSON output contract.

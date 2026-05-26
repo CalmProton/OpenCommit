@@ -2,7 +2,7 @@
   "name": "ai-commit-msg",
   "displayName": "AI Commit Message",
   "description": "Generate Git commit messages from staged or unstaged changes using OpenRouter.",
-  "version": "0.0.6",
+  "version": "1.0.0",
   "publisher": "local",
   "license": "MIT",
   "private": true,
