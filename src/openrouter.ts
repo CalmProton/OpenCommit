@@ -188,8 +188,8 @@ function buildEmptyResponseMessage(payload: any, choice: any): string {
 
   const finishReason = choice?.finish_reason;
   const hint = finishReason === 'length'
-    ? ' The model likely used the output token budget before writing final text. Increase aiCommitMsg.maxOutputTokens or choose a non-reasoning model.'
-    : ' Try a concrete non-reasoning OpenRouter model or increase aiCommitMsg.maxOutputTokens.';
+    ? ' The model likely used the output token budget before writing final text. Increase opencommit.maxOutputTokens or choose a non-reasoning model.'
+    : ' Try a concrete non-reasoning OpenRouter model or increase opencommit.maxOutputTokens.';
 
   return `OpenRouter returned no message content (${details.join('; ')}).${hint}`;
 }

@@ -2,7 +2,7 @@
   "name": "opencommit",
   "displayName": "OpenCommit",
   "description": "Free Conventional Commits generator for VS Code, powered by OpenRouter.",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "publisher": "MadElectron",
   "license": "MIT",
   "repository": {
@@ -18,8 +18,7 @@
     "vscode": "^1.95.0"
   },
   "categories": [
-    "SCM Providers",
-    "AI"
+    "SCM Providers"
   ],
   "keywords": [
     "git",
@@ -79,40 +78,40 @@
     "configuration": {
       "title": "OpenCommit",
       "properties": {
-        "aiCommitMsg.provider": {
+        "opencommit.provider": {
           "type": "string",
           "scope": "resource",
           "enum": [
             "openrouter"
           ],
           "default": "openrouter",
-          "description": "AI provider used to generate commit messages."
+          "description": "Provider used to generate commit messages."
         },
-        "aiCommitMsg.openRouter.baseUrl": {
+        "opencommit.openRouter.baseUrl": {
           "type": "string",
           "scope": "resource",
           "default": "https://openrouter.ai/api/v1",
           "description": "OpenRouter API base URL."
         },
-        "aiCommitMsg.openRouter.model": {
+        "opencommit.openRouter.model": {
           "type": "string",
           "scope": "resource",
           "default": "openrouter/auto",
           "description": "OpenRouter model id used for commit message generation."
         },
-        "aiCommitMsg.openRouter.siteUrl": {
+        "opencommit.openRouter.siteUrl": {
           "type": "string",
           "scope": "resource",
           "default": "",
           "description": "Optional HTTP-Referer header value sent to OpenRouter."
         },
-        "aiCommitMsg.openRouter.appTitle": {
+        "opencommit.openRouter.appTitle": {
           "type": "string",
           "scope": "resource",
           "default": "OpenCommit VS Code Extension",
           "description": "Optional X-Title header value sent to OpenRouter."
         },
-        "aiCommitMsg.format": {
+        "opencommit.format": {
           "type": "string",
           "scope": "resource",
           "enum": [
@@ -123,7 +122,7 @@
           "default": "conventional",
           "description": "Commit message style. Conventional Commits is the default standard."
         },
-        "aiCommitMsg.includeBody": {
+        "opencommit.includeBody": {
           "type": "string",
           "scope": "resource",
           "enum": [
@@ -134,27 +133,27 @@
           "default": "auto",
           "description": "Whether generated commit messages should include a body."
         },
-        "aiCommitMsg.customInstructions": {
+        "opencommit.customInstructions": {
           "type": "string",
           "scope": "resource",
           "default": "",
-          "markdownDescription": "Additional prompt instructions. Used together with built-in rules, and especially useful when `aiCommitMsg.format` is `custom`."
+          "markdownDescription": "Additional prompt instructions. Used together with built-in rules, and especially useful when `opencommit.format` is `custom`."
         },
-        "aiCommitMsg.preferStaged": {
+        "opencommit.preferStaged": {
           "type": "boolean",
           "scope": "resource",
           "default": true,
           "description": "Use staged changes when any are present; otherwise use unstaged changes."
         },
-        "aiCommitMsg.maxDiffChars": {
+        "opencommit.maxDiffChars": {
           "type": "number",
           "scope": "resource",
           "default": 0,
           "minimum": 0,
           "maximum": 2000000,
-          "markdownDescription": "Optional legacy character cap for diff content. Set to `0` to use token budgeting from `aiCommitMsg.modelContextTokens` and `aiCommitMsg.maxPromptContextRatio`."
+          "markdownDescription": "Optional character cap for diff content. Set to `0` to use token budgeting from `opencommit.modelContextTokens` and `opencommit.maxPromptContextRatio`."
         },
-        "aiCommitMsg.modelContextTokens": {
+        "opencommit.modelContextTokens": {
           "type": "number",
           "scope": "resource",
           "default": 200000,
@@ -162,7 +161,7 @@
           "maximum": 2000000,
           "description": "Assumed model context window in tokens. Used for local prompt budgeting; OpenRouter metadata is not fetched automatically."
         },
-        "aiCommitMsg.maxPromptContextRatio": {
+        "opencommit.maxPromptContextRatio": {
           "type": "number",
           "scope": "resource",
           "default": 0.6,
@@ -170,29 +169,29 @@
           "maximum": 0.95,
           "description": "Maximum fraction of the configured model context window used for the prompt."
         },
-        "aiCommitMsg.maxPromptTokens": {
+        "opencommit.maxPromptTokens": {
           "type": "number",
           "scope": "resource",
           "default": 0,
           "minimum": 0,
           "maximum": 2000000,
-          "markdownDescription": "Optional direct prompt token budget. Set to `0` to calculate it from `aiCommitMsg.modelContextTokens * aiCommitMsg.maxPromptContextRatio`."
+          "markdownDescription": "Optional direct prompt token budget. Set to `0` to calculate it from `opencommit.modelContextTokens * opencommit.maxPromptContextRatio`."
         },
-        "aiCommitMsg.language": {
+        "opencommit.language": {
           "type": "string",
           "scope": "resource",
           "default": "en",
           "description": "Language for the generated commit message."
         },
-        "aiCommitMsg.temperature": {
+        "opencommit.temperature": {
           "type": "number",
           "scope": "resource",
           "default": 0.2,
           "minimum": 0,
           "maximum": 2,
-          "description": "Sampling temperature for the AI request."
+          "description": "Sampling temperature for the provider request."
         },
-        "aiCommitMsg.maxOutputTokens": {
+        "opencommit.maxOutputTokens": {
           "type": "number",
           "scope": "resource",
           "default": 800,
@@ -200,7 +199,7 @@
           "maximum": 4000,
           "description": "Maximum output tokens for the generated commit message."
         },
-        "aiCommitMsg.debugLogging": {
+        "opencommit.debugLogging": {
           "type": "boolean",
           "scope": "resource",
           "default": false,

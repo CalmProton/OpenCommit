@@ -114,7 +114,7 @@ async function generateCommitMessage(context: vscode.ExtensionContext): Promise<
             logger.text('Diff sent to OpenRouter', diffContext.diff);
             logger.json('Messages sent to OpenRouter', messages);
           } else {
-            logger.line('Enable aiCommitMsg.debugLogging for full diff, prompt, request, and response diagnostics.');
+            logger.line('Enable opencommit.debugLogging for full diff, prompt, request, and response diagnostics.');
           }
 
           const result = await createOpenRouterCommitMessage(apiKey, messages, settings, abortController.signal);

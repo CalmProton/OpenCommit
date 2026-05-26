@@ -1,9 +1,15 @@
 # Changelog
 
+## 1.0.2
+
+- Rename the public settings namespace to `opencommit`.
+- Update README and Marketplace text to use OpenCommit and Conventional Commits wording.
+- Add a local release skill for future release automation.
+
 ## 1.0.1
 
 - Generate Conventional Commits messages by default.
-- Attach the Conventional Commits 1.0.0 specification to the model prompt for `aiCommitMsg.format: conventional`.
+- Attach the Conventional Commits 1.0.0 specification to the model prompt for `opencommit.format: conventional`.
 - Keep simple and custom formats available for workspace override.
 
 ## 1.0.0
@@ -25,7 +31,7 @@
 ## 0.0.5
 
 - Normalize VS Code Git API diff objects into usable patch text instead of `[object Object]`.
-- Add `aiCommitMsg.debugLogging` to control verbose request/response diagnostics.
+- Add debug logging to control verbose request/response diagnostics.
 - Keep concise generation summaries enabled by default.
 
 ## 0.0.4

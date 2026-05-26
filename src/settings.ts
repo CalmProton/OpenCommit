@@ -26,7 +26,7 @@ export interface ExtensionSettings {
 }
 
 export function getSettings(): ExtensionSettings {
-  const config = vscode.workspace.getConfiguration('aiCommitMsg');
+  const config = vscode.workspace.getConfiguration('opencommit');
 
   return {
     provider: config.get<'openrouter'>('provider', 'openrouter'),

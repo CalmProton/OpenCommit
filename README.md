@@ -25,25 +25,25 @@ Example `.vscode/settings.json`:
 
 ```json
 {
-  "aiCommitMsg.openRouter.model": "openrouter/auto",
-  "aiCommitMsg.format": "conventional",
-  "aiCommitMsg.includeBody": "auto",
-  "aiCommitMsg.preferStaged": true,
-  "aiCommitMsg.modelContextTokens": 200000,
-  "aiCommitMsg.maxPromptContextRatio": 0.6,
-  "aiCommitMsg.maxPromptTokens": 0,
-  "aiCommitMsg.maxDiffChars": 0,
-  "aiCommitMsg.maxOutputTokens": 800,
-  "aiCommitMsg.debugLogging": false,
-  "aiCommitMsg.customInstructions": "Use concise commit messages. Avoid mentioning generated files unless they are the main change."
+  "opencommit.openRouter.model": "openrouter/auto",
+  "opencommit.format": "conventional",
+  "opencommit.includeBody": "auto",
+  "opencommit.preferStaged": true,
+  "opencommit.modelContextTokens": 200000,
+  "opencommit.maxPromptContextRatio": 0.6,
+  "opencommit.maxPromptTokens": 0,
+  "opencommit.maxDiffChars": 0,
+  "opencommit.maxOutputTokens": 800,
+  "opencommit.debugLogging": false,
+  "opencommit.customInstructions": "Use concise commit messages. Avoid mentioning generated files unless they are the main change."
 }
 ```
 
 Do not store API keys in workspace settings. Run `OpenCommit: Set OpenRouter API Key` instead.
 
-`aiCommitMsg.format` defaults to `conventional`. Set it to `simple` or `custom` only if a workspace needs a different style.
+`opencommit.format` defaults to `conventional`. Set it to `simple` or `custom` only if a workspace needs a different style.
 
-The extension disables reasoning tokens by default because commit messages do not need hidden reasoning budgets. If OpenRouter still returns no message content, try increasing `aiCommitMsg.maxOutputTokens` or choose a concrete non-reasoning model instead of `openrouter/auto`.
+The extension disables reasoning tokens by default because commit messages do not need hidden reasoning budgets. If OpenRouter still returns no message content, try increasing `opencommit.maxOutputTokens` or choose a concrete non-reasoning model instead of `openrouter/auto`.
 
 ## Conventional Commits
 
@@ -57,15 +57,15 @@ OpenCommit reads Git diffs from the selected repository only when you run `OpenC
 
 The extension does not fetch OpenRouter model metadata. Instead, it assumes a configurable context window:
 
-- `aiCommitMsg.modelContextTokens`: default `200000`
-- `aiCommitMsg.maxPromptContextRatio`: default `0.6`
-- `aiCommitMsg.maxPromptTokens`: optional direct override; `0` means calculated from the ratio
+- `opencommit.modelContextTokens`: default `200000`
+- `opencommit.maxPromptContextRatio`: default `0.6`
+- `opencommit.maxPromptTokens`: optional direct override; `0` means calculated from the ratio
 
-Diff content is budgeted from this token limit with room reserved for instructions and model output. Large diffs are split by file patch and truncated at patch boundaries where possible. `aiCommitMsg.maxDiffChars` is an optional extra legacy cap; leave it at `0` to use token budgeting.
+Diff content is budgeted from this token limit with room reserved for instructions and model output. Large diffs are split by file patch and truncated at patch boundaries where possible. `opencommit.maxDiffChars` is an optional extra cap; leave it at `0` to use token budgeting.
 
 ## Settings UI
 
-After installing or updating the VSIX, reload VS Code. In Settings, search for `OpenCommit`, `aiCommitMsg`, or `@ext:MadElectron.opencommit`.
+After installing or updating the VSIX, reload VS Code. In Settings, search for `OpenCommit`, `opencommit`, or `@ext:MadElectron.opencommit`.
 
 ## Diagnostics
 
@@ -83,7 +83,7 @@ Enable verbose diagnostics with:
 
 ```json
 {
-  "aiCommitMsg.debugLogging": true
+  "opencommit.debugLogging": true
 }
 ```
 
