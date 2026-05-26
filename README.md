@@ -1,6 +1,6 @@
 # OpenCommit
 
-VSCode Extension for generating commit messages based on Conventional Commits specification, powered by OpenRouter API.
+VSCode extension for generating commit messages based on Conventional Commits specification, powered by OpenRouter API.
 
 ## Features
 
