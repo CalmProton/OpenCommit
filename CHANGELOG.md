@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.0.6
+
+- Use structured XML prompts with a strict JSON output contract.
+- Add configurable context-window budgeting with `modelContextTokens`, `maxPromptContextRatio`, and `maxPromptTokens`.
+- Use Git CLI diffs as the primary tracked-diff source and keep VS Code Git API as a fallback.
+- Make extension settings resource-scoped for workspace and folder configuration.
+
+## 0.0.5
+
+- Normalize VS Code Git API diff objects into usable patch text instead of `[object Object]`.
+- Add `aiCommitMsg.debugLogging` to control verbose request/response diagnostics.
+- Keep concise generation summaries enabled by default.
+
+## 0.0.4
+
+- Add verbose generation logs for settings, Git context, diff, prompt messages, OpenRouter request/response, raw model text, and final commit message.
+- Tighten prompt instructions to avoid over-inference from small diffs.
+- Preserve OpenRouter request/response diagnostics when provider calls fail.
+
+## 0.0.3
+
+- Disable OpenRouter reasoning by default for commit-message generation.
+
+## 0.0.2
+
+- Improve OpenRouter empty-response diagnostics.
+- Request low reasoning effort and exclude reasoning output.
+- Raise default output token budget for reasoning-model compatibility.
+
 ## 0.0.1
 
 - Initial local version.

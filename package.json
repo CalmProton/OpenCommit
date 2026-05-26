@@ -2,7 +2,7 @@
   "name": "ai-commit-msg",
   "displayName": "AI Commit Message",
   "description": "Generate Git commit messages from staged or unstaged changes using OpenRouter.",
-  "version": "0.0.1",
+  "version": "0.0.6",
   "publisher": "local",
   "license": "UNLICENSED",
   "private": true,
@@ -13,6 +13,13 @@
   "categories": [
     "SCM Providers",
     "AI"
+  ],
+  "keywords": [
+    "git",
+    "commit",
+    "source control",
+    "openrouter",
+    "ai"
   ],
   "activationEvents": [
     "onCommand:aiCommitMsg.generate",
@@ -72,6 +79,7 @@
       "properties": {
         "aiCommitMsg.provider": {
           "type": "string",
+          "scope": "resource",
           "enum": [
             "openrouter"
           ],
@@ -80,26 +88,31 @@
         },
         "aiCommitMsg.openRouter.baseUrl": {
           "type": "string",
+          "scope": "resource",
           "default": "https://openrouter.ai/api/v1",
           "description": "OpenRouter API base URL."
         },
         "aiCommitMsg.openRouter.model": {
           "type": "string",
+          "scope": "resource",
           "default": "openrouter/auto",
           "description": "OpenRouter model id used for commit message generation."
         },
         "aiCommitMsg.openRouter.siteUrl": {
           "type": "string",
+          "scope": "resource",
           "default": "",
           "description": "Optional HTTP-Referer header value sent to OpenRouter."
         },
         "aiCommitMsg.openRouter.appTitle": {
           "type": "string",
+          "scope": "resource",
           "default": "AI Commit Message VS Code Extension",
           "description": "Optional X-Title header value sent to OpenRouter."
         },
         "aiCommitMsg.format": {
           "type": "string",
+          "scope": "resource",
           "enum": [
             "conventional",
             "simple",
@@ -110,6 +123,7 @@
         },
         "aiCommitMsg.includeBody": {
           "type": "string",
+          "scope": "resource",
           "enum": [
             "never",
             "auto",
@@ -120,28 +134,57 @@
         },
         "aiCommitMsg.customInstructions": {
           "type": "string",
+          "scope": "resource",
           "default": "",
           "markdownDescription": "Additional prompt instructions. Used together with built-in rules, and especially useful when `aiCommitMsg.format` is `custom`."
         },
         "aiCommitMsg.preferStaged": {
           "type": "boolean",
+          "scope": "resource",
           "default": true,
           "description": "Use staged changes when any are present; otherwise use unstaged changes."
         },
         "aiCommitMsg.maxDiffChars": {
           "type": "number",
-          "default": 20000,
-          "minimum": 1000,
-          "maximum": 200000,
-          "description": "Maximum number of diff characters sent to the AI provider."
+          "scope": "resource",
+          "default": 0,
+          "minimum": 0,
+          "maximum": 2000000,
+          "markdownDescription": "Optional legacy character cap for diff content. Set to `0` to use token budgeting from `aiCommitMsg.modelContextTokens` and `aiCommitMsg.maxPromptContextRatio`."
+        },
+        "aiCommitMsg.modelContextTokens": {
+          "type": "number",
+          "scope": "resource",
+          "default": 200000,
+          "minimum": 4096,
+          "maximum": 2000000,
+          "description": "Assumed model context window in tokens. Used for local prompt budgeting; OpenRouter metadata is not fetched automatically."
+        },
+        "aiCommitMsg.maxPromptContextRatio": {
+          "type": "number",
+          "scope": "resource",
+          "default": 0.6,
+          "minimum": 0.05,
+          "maximum": 0.95,
+          "description": "Maximum fraction of the configured model context window used for the prompt."
+        },
+        "aiCommitMsg.maxPromptTokens": {
+          "type": "number",
+          "scope": "resource",
+          "default": 0,
+          "minimum": 0,
+          "maximum": 2000000,
+          "markdownDescription": "Optional direct prompt token budget. Set to `0` to calculate it from `aiCommitMsg.modelContextTokens * aiCommitMsg.maxPromptContextRatio`."
         },
         "aiCommitMsg.language": {
           "type": "string",
+          "scope": "resource",
           "default": "en",
           "description": "Language for the generated commit message."
         },
         "aiCommitMsg.temperature": {
           "type": "number",
+          "scope": "resource",
           "default": 0.2,
           "minimum": 0,
           "maximum": 2,
@@ -149,10 +192,17 @@
         },
         "aiCommitMsg.maxOutputTokens": {
           "type": "number",
-          "default": 220,
+          "scope": "resource",
+          "default": 800,
           "minimum": 50,
-          "maximum": 1000,
+          "maximum": 4000,
           "description": "Maximum output tokens for the generated commit message."
+        },
+        "aiCommitMsg.debugLogging": {
+          "type": "boolean",
+          "scope": "resource",
+          "default": false,
+          "description": "Write detailed prompts, diffs, redacted request metadata, raw provider responses, and final commit message cleanup details to the AI Commit Message output channel."
         }
       }
     }

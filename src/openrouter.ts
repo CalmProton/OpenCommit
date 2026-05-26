@@ -5,13 +5,45 @@ export interface ChatMessage {
   content: string;
 }
 
+export interface OpenRouterRequestLog {
+  url: string;
+  headers: Record<string, string>;
+  body: Record<string, unknown>;
+}
+
+export interface OpenRouterResponseLog {
+  status: number;
+  statusText: string;
+  bodyText: string;
+  payload: unknown;
+  choiceSummary: Record<string, unknown>;
+}
+
+export interface OpenRouterResult {
+  text: string;
+  request: OpenRouterRequestLog;
+  response: OpenRouterResponseLog;
+}
+
+export class OpenRouterResponseError extends Error {
+  constructor(
+    message: string,
+    readonly request: OpenRouterRequestLog,
+    readonly response: OpenRouterResponseLog
+  ) {
+    super(message);
+    this.name = 'OpenRouterResponseError';
+  }
+}
+
 export async function createOpenRouterCommitMessage(
   apiKey: string,
   messages: ChatMessage[],
   settings: ExtensionSettings,
   signal?: AbortSignal
-): Promise<string> {
+): Promise<OpenRouterResult> {
   const baseUrl = settings.openRouter.baseUrl.replace(/\/+$/, '');
+  const url = `${baseUrl}/chat/completions`;
   const headers: Record<string, string> = {
     Authorization: `Bearer ${apiKey}`,
     'Content-Type': 'application/json'
@@ -25,34 +57,60 @@ export async function createOpenRouterCommitMessage(
     headers['X-Title'] = settings.openRouter.appTitle.trim();
   }
 
-  const response = await fetch(`${baseUrl}/chat/completions`, {
+  const body = {
+    model: settings.openRouter.model,
+    messages,
+    temperature: settings.temperature,
+    max_tokens: settings.maxOutputTokens,
+    stream: false,
+    reasoning: {
+      effort: 'none',
+      exclude: true
+    }
+  };
+  const request: OpenRouterRequestLog = {
+    url,
+    headers: {
+      ...headers,
+      Authorization: 'Bearer [REDACTED_OPENROUTER_KEY]'
+    },
+    body
+  };
+
+  const response = await fetch(url, {
     method: 'POST',
     headers,
     signal,
-    body: JSON.stringify({
-      model: settings.openRouter.model,
-      messages,
-      temperature: settings.temperature,
-      max_tokens: settings.maxOutputTokens
-    })
+    body: JSON.stringify(body)
   });
 
   const text = await response.text();
   const payload = parseJson(text);
+  const choice = payload?.choices?.[0];
+  const responseLog: OpenRouterResponseLog = {
+    status: response.status,
+    statusText: response.statusText,
+    bodyText: text,
+    payload,
+    choiceSummary: summarizeChoice(payload, choice)
+  };
 
   if (!response.ok) {
     const message = extractErrorMessage(payload) ?? text;
-    throw new Error(`OpenRouter request failed (${response.status}): ${message}`);
+    throw new OpenRouterResponseError(`OpenRouter request failed (${response.status}): ${message}`, request, responseLog);
   }
 
-  const content = payload?.choices?.[0]?.message?.content;
-  const result = normalizeContent(content);
+  const result = extractCompletionText(payload, choice);
 
   if (!result.trim()) {
-    throw new Error('OpenRouter returned an empty commit message.');
+    throw new OpenRouterResponseError(buildEmptyResponseMessage(payload, choice), request, responseLog);
   }
 
-  return result;
+  return {
+    text: result,
+    request,
+    response: responseLog
+  };
 }
 
 function parseJson(text: string): any {
@@ -73,6 +131,25 @@ function extractErrorMessage(payload: any): string | undefined {
   }
 
   return undefined;
+}
+
+function extractCompletionText(payload: any, choice: any): string {
+  const content = choice?.message?.content;
+  const normalizedContent = normalizeContent(content);
+
+  if (normalizedContent.trim()) {
+    return normalizedContent;
+  }
+
+  if (typeof choice?.text === 'string') {
+    return choice.text;
+  }
+
+  if (typeof payload?.output_text === 'string') {
+    return payload.output_text;
+  }
+
+  return '';
 }
 
 function normalizeContent(content: unknown): string {
@@ -97,4 +174,45 @@ function normalizeContent(content: unknown): string {
   }
 
   return '';
+}
+
+function buildEmptyResponseMessage(payload: any, choice: any): string {
+  const details = [
+    `model=${stringOrUnknown(payload?.model)}`,
+    `finish_reason=${stringOrUnknown(choice?.finish_reason)}`,
+    `native_finish_reason=${stringOrUnknown(choice?.native_finish_reason)}`,
+    `message_keys=${choice?.message ? Object.keys(choice.message).join(',') || 'none' : 'none'}`,
+    `completion_tokens=${numberOrUnknown(payload?.usage?.completion_tokens)}`,
+    `reasoning_tokens=${numberOrUnknown(payload?.usage?.completion_tokens_details?.reasoning_tokens)}`
+  ];
+
+  const finishReason = choice?.finish_reason;
+  const hint = finishReason === 'length'
+    ? ' The model likely used the output token budget before writing final text. Increase aiCommitMsg.maxOutputTokens or choose a non-reasoning model.'
+    : ' Try a concrete non-reasoning OpenRouter model or increase aiCommitMsg.maxOutputTokens.';
+
+  return `OpenRouter returned no message content (${details.join('; ')}).${hint}`;
+}
+
+function summarizeChoice(payload: any, choice: any): Record<string, unknown> {
+  return {
+    id: payload?.id,
+    model: payload?.model,
+    finish_reason: choice?.finish_reason,
+    native_finish_reason: choice?.native_finish_reason,
+    message_keys: choice?.message ? Object.keys(choice.message) : [],
+    content_length: normalizeContent(choice?.message?.content).length,
+    completion_tokens: payload?.usage?.completion_tokens,
+    reasoning_tokens: payload?.usage?.completion_tokens_details?.reasoning_tokens,
+    prompt_tokens: payload?.usage?.prompt_tokens,
+    total_tokens: payload?.usage?.total_tokens
+  };
+}
+
+function stringOrUnknown(value: unknown): string {
+  return typeof value === 'string' && value.trim() ? value : 'unknown';
+}
+
+function numberOrUnknown(value: unknown): string {
+  return typeof value === 'number' ? String(value) : 'unknown';
 }

@@ -16,9 +16,13 @@ export interface ExtensionSettings {
   customInstructions: string;
   preferStaged: boolean;
   maxDiffChars: number;
+  modelContextTokens: number;
+  maxPromptContextRatio: number;
+  maxPromptTokens: number;
   language: string;
   temperature: number;
   maxOutputTokens: number;
+  debugLogging: boolean;
 }
 
 export function getSettings(): ExtensionSettings {
@@ -36,9 +40,13 @@ export function getSettings(): ExtensionSettings {
     includeBody: config.get<IncludeBody>('includeBody', 'auto'),
     customInstructions: config.get<string>('customInstructions', ''),
     preferStaged: config.get<boolean>('preferStaged', true),
-    maxDiffChars: config.get<number>('maxDiffChars', 20000),
+    maxDiffChars: config.get<number>('maxDiffChars', 0),
+    modelContextTokens: config.get<number>('modelContextTokens', 200000),
+    maxPromptContextRatio: config.get<number>('maxPromptContextRatio', 0.6),
+    maxPromptTokens: config.get<number>('maxPromptTokens', 0),
     language: config.get<string>('language', 'en'),
     temperature: config.get<number>('temperature', 0.2),
-    maxOutputTokens: config.get<number>('maxOutputTokens', 220)
+    maxOutputTokens: config.get<number>('maxOutputTokens', 800),
+    debugLogging: config.get<boolean>('debugLogging', false)
   };
 }
