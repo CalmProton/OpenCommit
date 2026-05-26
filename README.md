@@ -42,6 +42,10 @@ Do not store API keys in workspace settings. Run `OpenCommit: Set OpenRouter API
 
 The extension disables reasoning tokens by default because commit messages do not need hidden reasoning budgets. If OpenRouter still returns no message content, try increasing `aiCommitMsg.maxOutputTokens` or choose a concrete non-reasoning model instead of `openrouter/auto`.
 
+## Privacy
+
+OpenCommit reads Git diffs from the selected repository only when you run `OpenCommit: Generate Commit Message`. The diff and prompt are sent to the configured OpenRouter API endpoint to generate the commit message. Your OpenRouter API key is stored in VS Code SecretStorage and is not written to workspace settings.
+
 ## Large Changes
 
 The extension does not fetch OpenRouter model metadata. Instead, it assumes a configurable context window:

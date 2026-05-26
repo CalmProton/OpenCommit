@@ -6,6 +6,8 @@
 - License the project under MIT.
 - Remove redundant command activation events from the extension manifest.
 - Explicitly include Node and VS Code typings in the TypeScript project configuration.
+- Add Marketplace metadata for the public repository, issue tracker, and homepage.
+- Document OpenRouter diff processing and API key storage.
 
 ## 0.0.6
 
