@@ -54,7 +54,7 @@ Diff content is budgeted from this token limit with room reserved for instructio
 
 ## Settings UI
 
-After installing or updating the VSIX, reload VS Code. In Settings, search for `AI Commit Message`, `aiCommitMsg`, or `@ext:local.ai-commit-msg`.
+After installing or updating the VSIX, reload VS Code. In Settings, search for `AI Commit Message`, `aiCommitMsg`, or `@ext:MadElectron.ai-commit-msg`.
 
 ## Diagnostics
 

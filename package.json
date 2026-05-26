@@ -3,7 +3,7 @@
   "displayName": "AI Commit Message",
   "description": "Generate Git commit messages from staged or unstaged changes using OpenRouter.",
   "version": "1.0.0",
-  "publisher": "local",
+  "publisher": "MadElectron",
   "license": "MIT",
   "private": true,
   "packageManager": "bun@1.3.13",
