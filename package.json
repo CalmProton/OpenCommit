@@ -32,18 +32,18 @@
   "contributes": {
     "commands": [
       {
-        "command": "aiCommitMsg.generate",
+        "command": "opencommit.generate",
         "title": "Generate Commit Message",
         "category": "OpenCommit",
         "icon": "$(sparkle)"
       },
       {
-        "command": "aiCommitMsg.setOpenRouterApiKey",
+        "command": "opencommit.setOpenRouterApiKey",
         "title": "Set OpenRouter API Key",
         "category": "OpenCommit"
       },
       {
-        "command": "aiCommitMsg.clearOpenRouterApiKey",
+        "command": "opencommit.clearOpenRouterApiKey",
         "title": "Clear OpenRouter API Key",
         "category": "OpenCommit"
       }
@@ -51,28 +51,28 @@
     "menus": {
       "scm/title": [
         {
-          "command": "aiCommitMsg.generate",
+          "command": "opencommit.generate",
           "when": "scmProvider == git",
           "group": "navigation@9"
         }
       ],
       "scm/repository": [
         {
-          "command": "aiCommitMsg.generate",
+          "command": "opencommit.generate",
           "when": "scmProvider == git",
           "group": "inline@9"
         }
       ],
       "commandPalette": [
         {
-          "command": "aiCommitMsg.generate",
+          "command": "opencommit.generate",
           "when": "config.git.enabled"
         },
         {
-          "command": "aiCommitMsg.setOpenRouterApiKey"
+          "command": "opencommit.setOpenRouterApiKey"
         },
         {
-          "command": "aiCommitMsg.clearOpenRouterApiKey"
+          "command": "opencommit.clearOpenRouterApiKey"
         }
       ]
     },

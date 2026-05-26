@@ -13,9 +13,9 @@ export function activate(context: vscode.ExtensionContext): void {
 
   context.subscriptions.push(
     output,
-    vscode.commands.registerCommand('aiCommitMsg.generate', () => generateCommitMessage(context)),
-    vscode.commands.registerCommand('aiCommitMsg.setOpenRouterApiKey', () => promptForOpenRouterApiKey(context.secrets)),
-    vscode.commands.registerCommand('aiCommitMsg.clearOpenRouterApiKey', () => clearOpenRouterApiKey(context.secrets))
+    vscode.commands.registerCommand('opencommit.generate', () => generateCommitMessage(context)),
+    vscode.commands.registerCommand('opencommit.setOpenRouterApiKey', () => promptForOpenRouterApiKey(context.secrets)),
+    vscode.commands.registerCommand('opencommit.clearOpenRouterApiKey', () => clearOpenRouterApiKey(context.secrets))
   );
 }
 
