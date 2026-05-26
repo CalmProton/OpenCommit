@@ -1,7 +1,7 @@
 {
   "name": "opencommit",
-  "displayName": "OpenCommit - AI Commit Message Generator",
-  "description": "Free AI commit message copilot for VS Code. Based on the Conventional Commits specification.",
+  "displayName": "OpenCommit",
+  "description": "Free Conventional Commits generator for VS Code, powered by OpenRouter.",
   "version": "1.0.1",
   "publisher": "MadElectron",
   "license": "MIT",
@@ -33,7 +33,7 @@
     "commands": [
       {
         "command": "opencommit.generate",
-        "title": "Generate Commit Message",
+        "title": "Generate",
         "category": "OpenCommit",
         "icon": "$(sparkle)"
       },
