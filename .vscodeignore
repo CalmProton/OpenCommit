@@ -6,4 +6,5 @@ node_modules/**
 .gitignore
 package-lock.json
 bun.lock
+*.md
 *.vsix

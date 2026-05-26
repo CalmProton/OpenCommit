@@ -1,4 +1,5 @@
 import type { ExtensionSettings } from './settings';
+import { CONVENTIONAL_COMMITS_SPEC } from './conventionalCommits';
 
 export interface PromptInput {
   diff: string;
@@ -12,8 +13,10 @@ export interface PromptInput {
 export function buildMessages(input: PromptInput): Array<{ role: 'system' | 'user'; content: string }> {
   const { settings } = input;
   const formatRules = getFormatRules(settings);
+  const formatSpec = getFormatSpec(settings);
+  const changeTypePolicy = getChangeTypePolicy(settings);
   const bodyRule = getBodyRule(settings.includeBody);
-  const request = buildStructuredRequest(input, formatRules, bodyRule);
+  const request = buildStructuredRequest(input, formatRules, formatSpec, changeTypePolicy, bodyRule);
 
   return [
     {
@@ -49,9 +52,16 @@ export function sanitizeCommitMessage(raw: string): string {
   return value.replace(/\r\n/g, '\n');
 }
 
-function buildStructuredRequest(input: PromptInput, formatRules: string, bodyRule: string): string {
+function buildStructuredRequest(
+  input: PromptInput,
+  formatRules: string,
+  formatSpec: string,
+  changeTypePolicy: string,
+  bodyRule: string
+): string {
   const settings = input.settings;
   const customInstructions = settings.customInstructions.trim();
+  const examples = getExamples(settings);
 
   return [
     '<commit_message_request>',
@@ -63,8 +73,8 @@ function buildStructuredRequest(input: PromptInput, formatRules: string, bodyRul
     '    <subject_max_columns>72</subject_max_columns>',
     `    <body_policy>${escapeXml(bodyRule)}</body_policy>`,
     `    <format_policy>${escapeXml(formatRules)}</format_policy>`,
-    '    <tiny_change_policy>For tiny text-only edits, use docs or chore and name the visible edited area. Do not invent behavior.</tiny_change_policy>',
-    '    <documentation_policy>If only documentation, headings, comments, wording, spelling, punctuation, or instructions changed, use docs or chore rather than fix, feat, or refactor.</documentation_policy>',
+    formatSpec,
+    `    <change_type_policy>${escapeXml(changeTypePolicy)}</change_type_policy>`,
     customInstructions ? `    <custom_instructions>${escapeXml(customInstructions)}</custom_instructions>` : '',
     '  </style_rules>',
     '  <output_contract>',
@@ -77,22 +87,44 @@ function buildStructuredRequest(input: PromptInput, formatRules: string, bodyRul
     `    <changed_files_json>${escapeXml(JSON.stringify(input.files))}</changed_files_json>`,
     `    <budget_json>${escapeXml(JSON.stringify(input.budget))}</budget_json>`,
     '  </change_context>',
-    '  <examples>',
-    '    <example>',
-    '      <visible_change>Markdown heading changed from "Overview" to "Overviews".</visible_change>',
-    '      <good_output>{"commitMessage":"docs: update architecture heading"}</good_output>',
-    '      <bad_output>{"commitMessage":"fix: handle null values in architecture parser"}</bad_output>',
-    '    </example>',
-    '    <example>',
-    '      <visible_change>Only generated lockfile dependency versions changed.</visible_change>',
-    '      <good_output>{"commitMessage":"chore: update dependency lockfile"}</good_output>',
-    '    </example>',
-    '  </examples>',
+    examples,
     '  <diff><![CDATA[',
     escapeCdata(input.diff),
     '  ]]></diff>',
     '</commit_message_request>'
   ].filter(Boolean).join('\n');
+}
+
+function getExamples(settings: ExtensionSettings): string {
+  if (settings.format === 'conventional') {
+    return [
+      '  <examples>',
+      '    <example>',
+      '      <visible_change>Markdown heading changed from "Overview" to "Overviews".</visible_change>',
+      '      <good_output>{"commitMessage":"docs: update architecture heading"}</good_output>',
+      '      <bad_output>{"commitMessage":"fix: handle null values in architecture parser"}</bad_output>',
+      '    </example>',
+      '    <example>',
+      '      <visible_change>Only generated lockfile dependency versions changed.</visible_change>',
+      '      <good_output>{"commitMessage":"chore: update dependency lockfile"}</good_output>',
+      '    </example>',
+      '  </examples>'
+    ].join('\n');
+  }
+
+  if (settings.format === 'simple' || settings.format === 'custom') {
+    return [
+      '  <examples>',
+      '    <example>',
+      '      <visible_change>Markdown heading changed from "Overview" to "Overviews".</visible_change>',
+      '      <good_output>{"commitMessage":"update architecture heading"}</good_output>',
+      '      <bad_output>{"commitMessage":"handle null values in architecture parser"}</bad_output>',
+      '    </example>',
+      '  </examples>'
+    ].join('\n');
+  }
+
+  return '';
 }
 
 function extractMessageFromJson(raw: string): string | undefined {
@@ -141,10 +173,38 @@ function getFormatRules(settings: ExtensionSettings): string {
     case 'conventional':
     default:
       return [
-        'Use Conventional Commits format when a clear type applies.',
-        'Use one of: feat, fix, docs, style, refactor, perf, test, build, ci, chore.',
-        'Include a short scope only when it is obvious from the diff.'
+        'Generate a Conventional Commits 1.0.0 commit message.',
+        'The subject line must follow: <type>[optional scope][optional !]: <description>.',
+        'Use feat for new features and fix for bug fixes.',
+        'Use common additional types when they fit the diff: build, chore, ci, docs, style, refactor, perf, test.',
+        'Include a short noun scope in parentheses only when it is obvious and useful from the diff.',
+        'If a breaking change is visible in the diff, append ! before the colon or include a BREAKING CHANGE footer.',
+        'Apply the full Conventional Commits 1.0.0 specification attached in <conventional_commits_spec>.'
       ].join('\n');
+  }
+}
+
+function getFormatSpec(settings: ExtensionSettings): string {
+  if (settings.format !== 'conventional') {
+    return '';
+  }
+
+  return [
+    '    <conventional_commits_spec><![CDATA[',
+    escapeCdata(CONVENTIONAL_COMMITS_SPEC),
+    '    ]]></conventional_commits_spec>'
+  ].join('\n');
+}
+
+function getChangeTypePolicy(settings: ExtensionSettings): string {
+  switch (settings.format) {
+    case 'conventional':
+      return [
+        'For tiny text-only edits, use docs or chore and name the visible edited area. Do not invent behavior.',
+        'If only documentation, headings, comments, wording, spelling, punctuation, or instructions changed, use docs or chore rather than fix, feat, or refactor.'
+      ].join('\n');
+    default:
+      return 'For tiny or text-only edits, name the visible edited area and do not invent behavior.';
   }
 }
 

@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.1
+
+- Generate Conventional Commits messages by default.
+- Attach the Conventional Commits 1.0.0 specification to the model prompt for `aiCommitMsg.format: conventional`.
+- Keep simple and custom formats available for workspace override.
+
 ## 1.0.0
 
 - Publish the first stable release.

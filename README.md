@@ -1,6 +1,6 @@
 # OpenCommit
 
-Free AI commit message copilot for VS Code, powered by OpenRouter.
+Free AI commit message copilot for VS Code, powered by OpenRouter and the Conventional Commits specification.
 
 ## Features
 
@@ -11,6 +11,7 @@ Free AI commit message copilot for VS Code, powered by OpenRouter.
 - Stores the OpenRouter API key in VS Code SecretStorage.
 - Supports workspace settings in `.vscode/settings.json`.
 - Writes generation summaries to the `OpenCommit` output channel, with optional verbose diagnostics.
+- Generates Conventional Commits messages by default, such as `fix(api): correct pagination offset`.
 
 ## Commands
 
@@ -39,6 +40,8 @@ Example `.vscode/settings.json`:
 ```
 
 Do not store API keys in workspace settings. Run `OpenCommit: Set OpenRouter API Key` instead.
+
+`aiCommitMsg.format` defaults to `conventional`. Set it to `simple` or `custom` only if a workspace needs a different style.
 
 The extension disables reasoning tokens by default because commit messages do not need hidden reasoning budgets. If OpenRouter still returns no message content, try increasing `aiCommitMsg.maxOutputTokens` or choose a concrete non-reasoning model instead of `openrouter/auto`.
 

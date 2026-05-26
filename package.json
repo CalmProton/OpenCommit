@@ -1,8 +1,8 @@
 {
   "name": "opencommit",
   "displayName": "OpenCommit - AI Commit Message Generator",
-  "description": "Free AI commit message copilot for VS Code. Based on OpenCommits specification.",
-  "version": "1.0.0",
+  "description": "Free AI commit message copilot for VS Code. Based on the Conventional Commits specification.",
+  "version": "1.0.1",
   "publisher": "MadElectron",
   "license": "MIT",
   "repository": {
@@ -121,7 +121,7 @@
             "custom"
           ],
           "default": "conventional",
-          "description": "Commit message style."
+          "description": "Commit message style. Conventional Commits is the default standard."
         },
         "aiCommitMsg.includeBody": {
           "type": "string",
