@@ -1,0 +1,171 @@
+{
+  "name": "ai-commit-msg",
+  "displayName": "AI Commit Message",
+  "description": "Generate Git commit messages from staged or unstaged changes using OpenRouter.",
+  "version": "0.0.1",
+  "publisher": "local",
+  "license": "UNLICENSED",
+  "private": true,
+  "packageManager": "bun@1.3.13",
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "categories": [
+    "SCM Providers",
+    "AI"
+  ],
+  "activationEvents": [
+    "onCommand:aiCommitMsg.generate",
+    "onCommand:aiCommitMsg.setOpenRouterApiKey",
+    "onCommand:aiCommitMsg.clearOpenRouterApiKey"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "aiCommitMsg.generate",
+        "title": "Generate Commit Message",
+        "category": "AI Commit Message",
+        "icon": "$(sparkle)"
+      },
+      {
+        "command": "aiCommitMsg.setOpenRouterApiKey",
+        "title": "Set OpenRouter API Key",
+        "category": "AI Commit Message"
+      },
+      {
+        "command": "aiCommitMsg.clearOpenRouterApiKey",
+        "title": "Clear OpenRouter API Key",
+        "category": "AI Commit Message"
+      }
+    ],
+    "menus": {
+      "scm/title": [
+        {
+          "command": "aiCommitMsg.generate",
+          "when": "scmProvider == git",
+          "group": "navigation@9"
+        }
+      ],
+      "scm/repository": [
+        {
+          "command": "aiCommitMsg.generate",
+          "when": "scmProvider == git",
+          "group": "inline@9"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "aiCommitMsg.generate",
+          "when": "config.git.enabled"
+        },
+        {
+          "command": "aiCommitMsg.setOpenRouterApiKey"
+        },
+        {
+          "command": "aiCommitMsg.clearOpenRouterApiKey"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "AI Commit Message",
+      "properties": {
+        "aiCommitMsg.provider": {
+          "type": "string",
+          "enum": [
+            "openrouter"
+          ],
+          "default": "openrouter",
+          "description": "AI provider used to generate commit messages."
+        },
+        "aiCommitMsg.openRouter.baseUrl": {
+          "type": "string",
+          "default": "https://openrouter.ai/api/v1",
+          "description": "OpenRouter API base URL."
+        },
+        "aiCommitMsg.openRouter.model": {
+          "type": "string",
+          "default": "openrouter/auto",
+          "description": "OpenRouter model id used for commit message generation."
+        },
+        "aiCommitMsg.openRouter.siteUrl": {
+          "type": "string",
+          "default": "",
+          "description": "Optional HTTP-Referer header value sent to OpenRouter."
+        },
+        "aiCommitMsg.openRouter.appTitle": {
+          "type": "string",
+          "default": "AI Commit Message VS Code Extension",
+          "description": "Optional X-Title header value sent to OpenRouter."
+        },
+        "aiCommitMsg.format": {
+          "type": "string",
+          "enum": [
+            "conventional",
+            "simple",
+            "custom"
+          ],
+          "default": "conventional",
+          "description": "Commit message style."
+        },
+        "aiCommitMsg.includeBody": {
+          "type": "string",
+          "enum": [
+            "never",
+            "auto",
+            "always"
+          ],
+          "default": "auto",
+          "description": "Whether generated commit messages should include a body."
+        },
+        "aiCommitMsg.customInstructions": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Additional prompt instructions. Used together with built-in rules, and especially useful when `aiCommitMsg.format` is `custom`."
+        },
+        "aiCommitMsg.preferStaged": {
+          "type": "boolean",
+          "default": true,
+          "description": "Use staged changes when any are present; otherwise use unstaged changes."
+        },
+        "aiCommitMsg.maxDiffChars": {
+          "type": "number",
+          "default": 20000,
+          "minimum": 1000,
+          "maximum": 200000,
+          "description": "Maximum number of diff characters sent to the AI provider."
+        },
+        "aiCommitMsg.language": {
+          "type": "string",
+          "default": "en",
+          "description": "Language for the generated commit message."
+        },
+        "aiCommitMsg.temperature": {
+          "type": "number",
+          "default": 0.2,
+          "minimum": 0,
+          "maximum": 2,
+          "description": "Sampling temperature for the AI request."
+        },
+        "aiCommitMsg.maxOutputTokens": {
+          "type": "number",
+          "default": 220,
+          "minimum": 50,
+          "maximum": 1000,
+          "description": "Maximum output tokens for the generated commit message."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "bun run compile && vsce package --allow-missing-repository"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/vscode": "^1.95.0",
+    "typescript": "^5.6.0",
+    "@vscode/vsce": "^3.2.0"
+  }
+}

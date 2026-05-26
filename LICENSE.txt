@@ -1,0 +1,6 @@
+This project is private local-use software.
+
+Copyright (c) 2026.
+
+No permission is granted to copy, publish, distribute, sublicense, or sell this
+software without explicit written permission from the copyright holder.
