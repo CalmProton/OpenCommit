@@ -12,6 +12,10 @@
     "strict": true,
     "moduleResolution": "Node16",
     "esModuleInterop": true,
+    "types": [
+      "node",
+      "vscode"
+    ],
     "skipLibCheck": true
   },
   "include": [

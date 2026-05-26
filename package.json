@@ -21,11 +21,6 @@
     "openrouter",
     "ai"
   ],
-  "activationEvents": [
-    "onCommand:aiCommitMsg.generate",
-    "onCommand:aiCommitMsg.setOpenRouterApiKey",
-    "onCommand:aiCommitMsg.clearOpenRouterApiKey"
-  ],
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
