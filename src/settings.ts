@@ -34,7 +34,7 @@ export function getSettings(): ExtensionSettings {
       baseUrl: config.get<string>('openRouter.baseUrl', 'https://openrouter.ai/api/v1'),
       model: config.get<string>('openRouter.model', 'openrouter/auto'),
       siteUrl: config.get<string>('openRouter.siteUrl', ''),
-      appTitle: config.get<string>('openRouter.appTitle', 'AI Commit Message VS Code Extension')
+      appTitle: config.get<string>('openRouter.appTitle', 'OpenCommit VS Code Extension')
     },
     format: config.get<CommitFormat>('format', 'conventional'),
     includeBody: config.get<IncludeBody>('includeBody', 'auto'),

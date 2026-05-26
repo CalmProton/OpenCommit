@@ -9,7 +9,7 @@ import { getSettings } from './settings';
 let output: vscode.OutputChannel;
 
 export function activate(context: vscode.ExtensionContext): void {
-  output = vscode.window.createOutputChannel('AI Commit Message');
+  output = vscode.window.createOutputChannel('OpenCommit');
 
   context.subscriptions.push(
     output,
@@ -153,7 +153,7 @@ async function generateCommitMessage(context: vscode.ExtensionContext): Promise<
 
     const message = error instanceof Error ? error.message : String(error);
     logger.error(error);
-    vscode.window.showErrorMessage(`AI Commit Message: ${message}`);
+    vscode.window.showErrorMessage(`OpenCommit: ${message}`);
   }
 }
 

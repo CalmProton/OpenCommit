@@ -1,6 +1,6 @@
-# AI Commit Message
+# OpenCommit
 
-Generate VS Code Git commit messages from staged or unstaged changes using OpenRouter.
+Free AI commit message copilot for VS Code, powered by OpenRouter.
 
 ## Features
 
@@ -10,13 +10,13 @@ Generate VS Code Git commit messages from staged or unstaged changes using OpenR
 - Writes the generated message into the built-in Git commit message input.
 - Stores the OpenRouter API key in VS Code SecretStorage.
 - Supports workspace settings in `.vscode/settings.json`.
-- Writes generation summaries to the `AI Commit Message` output channel, with optional verbose diagnostics.
+- Writes generation summaries to the `OpenCommit` output channel, with optional verbose diagnostics.
 
 ## Commands
 
-- `AI Commit Message: Generate Commit Message`
-- `AI Commit Message: Set OpenRouter API Key`
-- `AI Commit Message: Clear OpenRouter API Key`
+- `OpenCommit: Generate Commit Message`
+- `OpenCommit: Set OpenRouter API Key`
+- `OpenCommit: Clear OpenRouter API Key`
 
 ## Settings
 
@@ -38,7 +38,7 @@ Example `.vscode/settings.json`:
 }
 ```
 
-Do not store API keys in workspace settings. Run `AI Commit Message: Set OpenRouter API Key` instead.
+Do not store API keys in workspace settings. Run `OpenCommit: Set OpenRouter API Key` instead.
 
 The extension disables reasoning tokens by default because commit messages do not need hidden reasoning budgets. If OpenRouter still returns no message content, try increasing `aiCommitMsg.maxOutputTokens` or choose a concrete non-reasoning model instead of `openrouter/auto`.
 
@@ -54,11 +54,11 @@ Diff content is budgeted from this token limit with room reserved for instructio
 
 ## Settings UI
 
-After installing or updating the VSIX, reload VS Code. In Settings, search for `AI Commit Message`, `aiCommitMsg`, or `@ext:MadElectron.ai-commit-msg`.
+After installing or updating the VSIX, reload VS Code. In Settings, search for `OpenCommit`, `aiCommitMsg`, or `@ext:MadElectron.opencommit`.
 
 ## Diagnostics
 
-Open the `AI Commit Message` output channel when a generated message looks wrong.
+Open the `OpenCommit` output channel when a generated message looks wrong.
 
 By default, each generation logs:
 

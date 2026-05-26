@@ -1,7 +1,7 @@
 {
-  "name": "ai-commit-msg",
-  "displayName": "AI Commit Message",
-  "description": "Generate Git commit messages from staged or unstaged changes using OpenRouter.",
+  "name": "opencommit",
+  "displayName": "OpenCommit",
+  "description": "Free AI commit message copilot for VS Code, powered by OpenRouter.",
   "version": "1.0.0",
   "publisher": "MadElectron",
   "license": "MIT",
@@ -27,18 +27,18 @@
       {
         "command": "aiCommitMsg.generate",
         "title": "Generate Commit Message",
-        "category": "AI Commit Message",
+        "category": "OpenCommit",
         "icon": "$(sparkle)"
       },
       {
         "command": "aiCommitMsg.setOpenRouterApiKey",
         "title": "Set OpenRouter API Key",
-        "category": "AI Commit Message"
+        "category": "OpenCommit"
       },
       {
         "command": "aiCommitMsg.clearOpenRouterApiKey",
         "title": "Clear OpenRouter API Key",
-        "category": "AI Commit Message"
+        "category": "OpenCommit"
       }
     ],
     "menus": {
@@ -70,7 +70,7 @@
       ]
     },
     "configuration": {
-      "title": "AI Commit Message",
+      "title": "OpenCommit",
       "properties": {
         "aiCommitMsg.provider": {
           "type": "string",
@@ -102,7 +102,7 @@
         "aiCommitMsg.openRouter.appTitle": {
           "type": "string",
           "scope": "resource",
-          "default": "AI Commit Message VS Code Extension",
+          "default": "OpenCommit VS Code Extension",
           "description": "Optional X-Title header value sent to OpenRouter."
         },
         "aiCommitMsg.format": {
@@ -197,7 +197,7 @@
           "type": "boolean",
           "scope": "resource",
           "default": false,
-          "description": "Write detailed prompts, diffs, redacted request metadata, raw provider responses, and final commit message cleanup details to the AI Commit Message output channel."
+          "description": "Write detailed prompts, diffs, redacted request metadata, raw provider responses, and final commit message cleanup details to the OpenCommit output channel."
         }
       }
     }
