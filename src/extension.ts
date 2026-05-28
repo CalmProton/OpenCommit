@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { buildDiffContext, getGitApi, pickRepository } from './git';
 import { createLogger } from './logger';
 import { createOpenRouterCommitMessage, OpenRouterResponseError } from './openrouter';
+import { registerPlannedCommits } from './plannedCommits';
 import { buildMessages, sanitizeCommitMessage } from './prompt';
 import { clearOpenRouterApiKey, getOpenRouterApiKey, promptForOpenRouterApiKey } from './secrets';
 import { getSettings } from './settings';
@@ -17,6 +18,8 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('opencommit.setOpenRouterApiKey', () => promptForOpenRouterApiKey(context.secrets)),
     vscode.commands.registerCommand('opencommit.clearOpenRouterApiKey', () => clearOpenRouterApiKey(context.secrets))
   );
+
+  registerPlannedCommits(context, output, () => ensureOpenRouterApiKey(context));
 }
 
 export function deactivate(): void {

@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.0
+
+- Add a `Planned Commits` Source Control view for splitting unstaged changes into multiple AI-planned commits.
+- Support moving files between planned commits, editing messages, regenerating messages, and adding or removing planned commit groups.
+- Commit planned groups sequentially with clean-index and stale-working-tree checks.
+
 ## 1.0.2
 
 - Rename the public settings namespace to `opencommit`.

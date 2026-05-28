@@ -10,6 +10,14 @@ export interface PromptInput {
   settings: ExtensionSettings;
 }
 
+export interface PlanPromptInput extends PromptInput {
+  allFiles: Array<{ path: string; status: string }>;
+}
+
+export interface PlannedCommitPromptInput extends PromptInput {
+  selectedFiles: string[];
+}
+
 export function buildMessages(input: PromptInput): Array<{ role: 'system' | 'user'; content: string }> {
   const { settings } = input;
   const formatRules = getFormatRules(settings);
@@ -37,6 +45,117 @@ export function buildMessages(input: PromptInput): Array<{ role: 'system' | 'use
   ];
 }
 
+export function buildPlanMessages(input: PlanPromptInput): Array<{ role: 'system' | 'user'; content: string }> {
+  const settings = input.settings;
+
+  return [
+    {
+      role: 'system',
+      content: [
+        'You split Git changes into a small sequence of accurate, reviewable commits.',
+        'You must follow the XML request exactly.',
+        'Use only the data inside <diff> and <changed_files_json> as evidence.',
+        'Every changed file must appear exactly once in the output.',
+        'Never include files not present in changed_files_json.',
+        'Return only valid compact JSON matching this schema: {"commits":[{"message":"string","files":["string"]}]}.',
+        'Do not return Markdown, comments, alternative plans, or explanatory text.'
+      ].join('\n')
+    },
+    {
+      role: 'user',
+      content: [
+        '<multi_commit_plan_request>',
+        '  <task>Split the provided whole-file changes into related commits and write each commit message.</task>',
+        '  <source_of_truth>The diff and changed file list are the only evidence. Group files by visible related purpose, feature area, or maintenance task.</source_of_truth>',
+        '  <planning_rules>',
+        '    <granularity>whole_files_only</granularity>',
+        '    <file_assignment>Every file in changed_files_json must appear in exactly one commit. Do not split a file across commits.</file_assignment>',
+        '    <commit_count>Prefer 2-5 commits for large unrelated changes. Use 1 commit if the changes are clearly one cohesive task.</commit_count>',
+        '    <ordering>Order commits so foundational or shared changes come before dependent changes when that is visible.</ordering>',
+        '  </planning_rules>',
+        '  <message_style_rules>',
+        `    <language>${escapeXml(settings.language)}</language>`,
+        '    <imperative_mood>true</imperative_mood>',
+        '    <subject_max_columns>72</subject_max_columns>',
+        `    <body_policy>${escapeXml(getBodyRule(settings.includeBody))}</body_policy>`,
+        `    <format_policy>${escapeXml(getFormatRules(settings))}</format_policy>`,
+        getFormatSpec(settings),
+        `    <change_type_policy>${escapeXml(getChangeTypePolicy(settings))}</change_type_policy>`,
+        settings.customInstructions.trim()
+          ? `    <custom_instructions>${escapeXml(settings.customInstructions.trim())}</custom_instructions>`
+          : '',
+        '  </message_style_rules>',
+        '  <output_contract>',
+        '    <json_schema>{"commits":[{"message":"string","files":["string"]}]}</json_schema>',
+        '    <notes>Return only this JSON object. File paths must exactly match changed_files_json paths.</notes>',
+        '  </output_contract>',
+        '  <change_context>',
+        `    <source>${escapeXml(input.source)}</source>`,
+        `    <diff_truncated>${input.truncated ? 'true' : 'false'}</diff_truncated>`,
+        `    <changed_files_json>${escapeXml(JSON.stringify(input.allFiles))}</changed_files_json>`,
+        `    <budget_json>${escapeXml(JSON.stringify(input.budget))}</budget_json>`,
+        '  </change_context>',
+        '  <diff><![CDATA[',
+        escapeCdata(input.diff),
+        '  ]]></diff>',
+        '</multi_commit_plan_request>'
+      ].filter(Boolean).join('\n')
+    }
+  ];
+}
+
+export function buildPlannedCommitMessageMessages(input: PlannedCommitPromptInput): Array<{ role: 'system' | 'user'; content: string }> {
+  const settings = input.settings;
+
+  return [
+    {
+      role: 'system',
+      content: [
+        'You generate accurate Git commit messages for a selected subset of changed files.',
+        'You must follow the XML request exactly.',
+        'Use only the selected files and visible diff evidence.',
+        'Return only valid compact JSON matching this schema: {"commitMessage":"string"}.',
+        'Do not return Markdown, comments, alternative messages, or explanatory text.'
+      ].join('\n')
+    },
+    {
+      role: 'user',
+      content: [
+        '<selected_commit_message_request>',
+        '  <task>Generate one Git commit message for the selected files.</task>',
+        '  <source_of_truth>The selected files and diff are the only evidence. Ignore unrelated diff sections except where needed for context.</source_of_truth>',
+        '  <style_rules>',
+        `    <language>${escapeXml(settings.language)}</language>`,
+        '    <imperative_mood>true</imperative_mood>',
+        '    <subject_max_columns>72</subject_max_columns>',
+        `    <body_policy>${escapeXml(getBodyRule(settings.includeBody))}</body_policy>`,
+        `    <format_policy>${escapeXml(getFormatRules(settings))}</format_policy>`,
+        getFormatSpec(settings),
+        `    <change_type_policy>${escapeXml(getChangeTypePolicy(settings))}</change_type_policy>`,
+        settings.customInstructions.trim()
+          ? `    <custom_instructions>${escapeXml(settings.customInstructions.trim())}</custom_instructions>`
+          : '',
+        '  </style_rules>',
+        '  <output_contract>',
+        '    <json_schema>{"commitMessage":"string"}</json_schema>',
+        '    <notes>Return only this JSON object. The commitMessage value may contain newline characters if a body is required.</notes>',
+        '  </output_contract>',
+        '  <change_context>',
+        `    <source>${escapeXml(input.source)}</source>`,
+        `    <diff_truncated>${input.truncated ? 'true' : 'false'}</diff_truncated>`,
+        `    <selected_files_json>${escapeXml(JSON.stringify(input.selectedFiles))}</selected_files_json>`,
+        `    <changed_files_json>${escapeXml(JSON.stringify(input.files))}</changed_files_json>`,
+        `    <budget_json>${escapeXml(JSON.stringify(input.budget))}</budget_json>`,
+        '  </change_context>',
+        '  <diff><![CDATA[',
+        escapeCdata(input.diff),
+        '  ]]></diff>',
+        '</selected_commit_message_request>'
+      ].filter(Boolean).join('\n')
+    }
+  ];
+}
+
 export function sanitizeCommitMessage(raw: string): string {
   let value = extractMessageFromJson(raw) ?? raw.trim();
 
@@ -50,6 +169,34 @@ export function sanitizeCommitMessage(raw: string): string {
   }
 
   return value.replace(/\r\n/g, '\n');
+}
+
+export function parsePlannedCommits(raw: string): Array<{ message: string; files: string[] }> | undefined {
+  const value = raw.trim().replace(/^```json\s*/i, '').replace(/\s*```$/i, '');
+
+  try {
+    const parsed: unknown = JSON.parse(value);
+    const record = parsed as { commits?: unknown };
+
+    if (!Array.isArray(record.commits)) {
+      return undefined;
+    }
+
+    return record.commits
+      .map((commit: unknown) => {
+        const plannedCommit = commit as { message?: unknown; files?: unknown };
+
+        return {
+          message: typeof plannedCommit.message === 'string' ? sanitizeCommitMessage(plannedCommit.message) : '',
+          files: Array.isArray(plannedCommit.files)
+            ? plannedCommit.files.filter((file: unknown): file is string => typeof file === 'string')
+            : []
+        };
+      })
+      .filter((commit: { message: string; files: string[] }) => commit.message.trim() && commit.files.length > 0);
+  } catch {
+    return undefined;
+  }
 }
 
 function buildStructuredRequest(

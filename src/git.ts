@@ -81,6 +81,12 @@ export interface DiffBudget {
   omittedFilePatches: number;
 }
 
+export interface ChangedFile {
+  path: string;
+  status: string;
+  uri: vscode.Uri;
+}
+
 export async function getGitApi(): Promise<GitApi> {
   const extension = vscode.extensions.getExtension<GitExtension>('vscode.git');
 
@@ -177,11 +183,168 @@ export async function buildDiffContext(repository: Repository, settings: Extensi
   };
 }
 
+export async function buildWorkingTreeDiffContext(repository: Repository, settings: ExtensionSettings): Promise<DiffContext> {
+  await assertCleanIndex(repository);
+
+  const files = await getWorkingTreeChangedFiles(repository);
+
+  if (files.length === 0) {
+    throw new Error('No unstaged or untracked changes found.');
+  }
+
+  const trackedDiff = await getUnstagedDiff(repository);
+  const untrackedDiff = await buildUntrackedDiffFromFiles(repository, files, getEffectiveMaxDiffChars(settings));
+  const rawDiff = [trackedDiff, untrackedDiff].filter(Boolean).join('\n\n');
+  const clipped = compactDiff(rawDiff, createDiffBudget(settings, rawDiff.length));
+
+  if (!clipped.diff.trim()) {
+    throw new Error('No text changes found to describe.');
+  }
+
+  return {
+    repository,
+    diff: clipped.diff,
+    source: 'unstaged',
+    files: files.map(file => ({
+      path: file.path,
+      status: file.status
+    })),
+    budget: clipped.budget,
+    truncated: clipped.truncated
+  };
+}
+
+export async function assertCleanIndex(repository: Repository): Promise<void> {
+  const status = await getStatusEntries(repository);
+  const staged = status.filter(entry => hasIndexChange(entry.xy));
+
+  if (staged.length > 0) {
+    throw new Error('Planned commits require a clean index. Unstage existing changes before planning or committing.');
+  }
+}
+
+export async function getWorkingTreeChangedFiles(repository: Repository): Promise<ChangedFile[]> {
+  const status = await getStatusEntries(repository);
+
+  return status
+    .filter(entry => !hasIndexChange(entry.xy) && hasWorkingTreeChange(entry.xy))
+    .map(entry => ({
+      path: entry.path,
+      status: statusDescription(entry.xy),
+      uri: vscode.Uri.file(path.join(repository.rootUri.fsPath, entry.path))
+    }));
+}
+
+export async function getWorkingTreeFingerprint(repository: Repository): Promise<string> {
+  const status = await gitExec(repository, ['status', '--porcelain=v1', '-z', '--']);
+  return status.stdout;
+}
+
+export async function gitAddPaths(repository: Repository, paths: readonly string[]): Promise<void> {
+  if (paths.length === 0) {
+    throw new Error('Cannot stage an empty planned commit.');
+  }
+
+  for (const batch of chunkGitPaths(paths)) {
+    await gitExec(repository, ['add', '-A', '--', ...batch]);
+  }
+}
+
+export async function gitCommitWithMessage(repository: Repository, messageFilePath: string): Promise<void> {
+  await gitExec(repository, ['commit', '-F', messageFilePath]);
+}
+
+export async function gitExec(repository: Repository, args: readonly string[]): Promise<{ stdout: string; stderr: string }> {
+  return execFileAsync('git', ['-c', 'core.quotepath=false', ...args], {
+    cwd: repository.rootUri.fsPath,
+    maxBuffer: 200 * 1024 * 1024
+  });
+}
+
 function describeChanges(repository: Repository, changes: readonly Change[]): Array<{ path: string; status: string }> {
   return changes.map(change => ({
     path: toRelativePath(repository.rootUri, change.uri),
     status: Status[change.status] ?? `UNKNOWN_${change.status}`
   }));
+}
+
+interface StatusEntry {
+  xy: string;
+  path: string;
+}
+
+async function getStatusEntries(repository: Repository): Promise<StatusEntry[]> {
+  const { stdout } = await gitExec(repository, ['status', '--porcelain=v1', '-z', '--']);
+  const parts = stdout.split('\0').filter(Boolean);
+  const entries: StatusEntry[] = [];
+
+  for (let index = 0; index < parts.length; index += 1) {
+    const entry = parts[index];
+    const xy = entry.slice(0, 2);
+    const filePath = entry.slice(3);
+
+    entries.push({
+      xy,
+      path: filePath
+    });
+
+    if (xy[0] === 'R' || xy[0] === 'C') {
+      index += 1;
+    }
+  }
+
+  return entries;
+}
+
+function hasIndexChange(xy: string): boolean {
+  const indexStatus = xy[0];
+  return indexStatus !== ' ' && indexStatus !== '?';
+}
+
+function hasWorkingTreeChange(xy: string): boolean {
+  return xy === '??' || xy[1] !== ' ';
+}
+
+function statusDescription(xy: string): string {
+  if (xy === '??') {
+    return 'UNTRACKED';
+  }
+
+  switch (xy[1]) {
+    case 'M':
+      return 'MODIFIED';
+    case 'D':
+      return 'DELETED';
+    case 'T':
+      return 'TYPE_CHANGED';
+    default:
+      return `WORKING_TREE_${xy[1] || 'UNKNOWN'}`;
+  }
+}
+
+function chunkGitPaths(paths: readonly string[]): string[][] {
+  const chunks: string[][] = [];
+  let current: string[] = [];
+  let currentChars = 0;
+
+  for (const filePath of paths) {
+    const nextChars = currentChars + filePath.length + 1;
+
+    if (current.length > 0 && nextChars > 12000) {
+      chunks.push(current);
+      current = [];
+      currentChars = 0;
+    }
+
+    current.push(filePath);
+    currentChars += filePath.length + 1;
+  }
+
+  if (current.length > 0) {
+    chunks.push(current);
+  }
+
+  return chunks;
 }
 
 function compactDiff(diff: string, budget: DiffBudget): { diff: string; budget: DiffBudget; truncated: boolean } {
@@ -289,10 +452,7 @@ async function getUnstagedDiff(repository: Repository): Promise<string> {
 
 async function gitDiff(repository: Repository, args: string[]): Promise<string> {
   try {
-    const { stdout } = await execFileAsync('git', ['-c', 'core.quotepath=false', ...args], {
-      cwd: repository.rootUri.fsPath,
-      maxBuffer: 200 * 1024 * 1024
-    });
+    const { stdout } = await gitExec(repository, args);
 
     return stdout;
   } catch {
@@ -351,6 +511,28 @@ async function buildUntrackedDiff(repository: Repository, maxChars: number): Pro
   return chunks.join('\n\n');
 }
 
+async function buildUntrackedDiffFromFiles(
+  repository: Repository,
+  files: readonly ChangedFile[],
+  maxChars: number
+): Promise<string> {
+  const chunks: string[] = [];
+  let remainingChars = Math.max(1000, maxChars);
+
+  for (const file of files.filter(file => file.status === 'UNTRACKED')) {
+    if (remainingChars <= 0) {
+      chunks.push('[Additional untracked files omitted because the diff is too large.]');
+      break;
+    }
+
+    const chunk = await readUntrackedFileAsPatch(file.uri, file.path, remainingChars);
+    chunks.push(chunk);
+    remainingChars -= chunk.length;
+  }
+
+  return chunks.join('\n\n');
+}
+
 async function readUntrackedFileAsPatch(uri: vscode.Uri, relativePath: string, maxChars: number): Promise<string> {
   try {
     const bytes = await vscode.workspace.fs.readFile(uri);
@@ -378,7 +560,7 @@ async function readUntrackedFileAsPatch(uri: vscode.Uri, relativePath: string, m
   }
 }
 
-function toRelativePath(rootUri: vscode.Uri, uri: vscode.Uri): string {
+export function toRelativePath(rootUri: vscode.Uri, uri: vscode.Uri): string {
   return path.relative(rootUri.fsPath, uri.fsPath).replace(/\\/g, '/');
 }
 

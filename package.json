@@ -2,7 +2,7 @@
   "name": "opencommit",
   "displayName": "OpenCommit",
   "description": "Free Conventional Commits generator for VS Code, powered by OpenRouter.",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "publisher": "MadElectron",
   "license": "MIT",
   "repository": {
@@ -45,6 +45,70 @@
         "command": "opencommit.clearOpenRouterApiKey",
         "title": "Clear OpenRouter API Key",
         "category": "OpenCommit"
+      },
+      {
+        "command": "opencommit.planCommits",
+        "title": "Plan Commits",
+        "category": "OpenCommit",
+        "icon": "$(list-tree)"
+      },
+      {
+        "command": "opencommit.commitPlannedCommits",
+        "title": "Commit Planned Commits",
+        "category": "OpenCommit",
+        "icon": "$(check-all)"
+      },
+      {
+        "command": "opencommit.regeneratePlan",
+        "title": "Regenerate Plan",
+        "category": "OpenCommit",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "opencommit.editPlannedCommitMessage",
+        "title": "Edit Commit Message",
+        "category": "OpenCommit",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "opencommit.regeneratePlannedCommitMessage",
+        "title": "Regenerate Commit Message",
+        "category": "OpenCommit",
+        "icon": "$(sparkle)"
+      },
+      {
+        "command": "opencommit.movePlannedCommitFile",
+        "title": "Move File to Commit",
+        "category": "OpenCommit",
+        "icon": "$(move)"
+      },
+      {
+        "command": "opencommit.addPlannedCommit",
+        "title": "Add Planned Commit",
+        "category": "OpenCommit",
+        "icon": "$(add)"
+      },
+      {
+        "command": "opencommit.removePlannedCommit",
+        "title": "Remove Planned Commit",
+        "category": "OpenCommit",
+        "icon": "$(trash)"
+      }
+    ],
+    "views": {
+      "scm": [
+        {
+          "id": "opencommit.plannedCommits",
+          "name": "Planned Commits",
+          "contextualTitle": "OpenCommit Planned Commits"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "opencommit.plannedCommits",
+        "contents": "Plan multiple AI-generated commits from unstaged changes.\n[Plan Commits](command:opencommit.planCommits)",
+        "when": "config.git.enabled"
       }
     ],
     "menus": {
@@ -62,9 +126,85 @@
           "group": "inline@9"
         }
       ],
+      "view/title": [
+        {
+          "command": "opencommit.planCommits",
+          "when": "view == opencommit.plannedCommits",
+          "group": "navigation@1"
+        },
+        {
+          "command": "opencommit.commitPlannedCommits",
+          "when": "view == opencommit.plannedCommits",
+          "group": "navigation@2"
+        },
+        {
+          "command": "opencommit.regeneratePlan",
+          "when": "view == opencommit.plannedCommits",
+          "group": "navigation@3"
+        },
+        {
+          "command": "opencommit.addPlannedCommit",
+          "when": "view == opencommit.plannedCommits",
+          "group": "navigation@4"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "opencommit.editPlannedCommitMessage",
+          "when": "view == opencommit.plannedCommits && viewItem == opencommit.commit",
+          "group": "inline@1"
+        },
+        {
+          "command": "opencommit.regeneratePlannedCommitMessage",
+          "when": "view == opencommit.plannedCommits && viewItem == opencommit.commit",
+          "group": "inline@2"
+        },
+        {
+          "command": "opencommit.removePlannedCommit",
+          "when": "view == opencommit.plannedCommits && viewItem == opencommit.commit",
+          "group": "inline@3"
+        },
+        {
+          "command": "opencommit.movePlannedCommitFile",
+          "when": "view == opencommit.plannedCommits && viewItem == opencommit.file",
+          "group": "inline@1"
+        }
+      ],
       "commandPalette": [
         {
           "command": "opencommit.generate",
+          "when": "config.git.enabled"
+        },
+        {
+          "command": "opencommit.planCommits",
+          "when": "config.git.enabled"
+        },
+        {
+          "command": "opencommit.commitPlannedCommits",
+          "when": "config.git.enabled"
+        },
+        {
+          "command": "opencommit.regeneratePlan",
+          "when": "config.git.enabled"
+        },
+        {
+          "command": "opencommit.editPlannedCommitMessage",
+          "when": "config.git.enabled"
+        },
+        {
+          "command": "opencommit.regeneratePlannedCommitMessage",
+          "when": "config.git.enabled"
+        },
+        {
+          "command": "opencommit.movePlannedCommitFile",
+          "when": "config.git.enabled"
+        },
+        {
+          "command": "opencommit.addPlannedCommit",
+          "when": "config.git.enabled"
+        },
+        {
+          "command": "opencommit.removePlannedCommit",
           "when": "config.git.enabled"
         },
         {
