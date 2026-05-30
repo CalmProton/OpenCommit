@@ -1,9 +1,22 @@
 # Changelog
 
+## 1.1.3
+
+- Refresh Commit Planner state when Git changes are committed elsewhere, removing only files that no longer have pending changes.
+- Allow deleting the final commit group to clear a stale or unwanted plan.
+
+## 1.1.2
+
+- Exclude local `.fallow` cache files from packaged VSIX output.
+
+## 1.1.1
+
+- Read resource-scoped OpenCommit settings using the selected repository URI so folder-level model settings are respected.
+
 ## 1.1.0
 
-- Add a `Planned Commits` Source Control view for splitting unstaged changes into multiple AI-planned commits.
-- Support moving files between planned commits, editing messages, regenerating messages, and adding or removing planned commit groups.
+- Add a `Commit Planner` Source Control view for splitting unstaged changes into multiple AI-generated commits.
+- Support moving files between commit groups, editing messages, regenerating messages, and adding or removing commit groups.
 - Commit planned groups sequentially with clean-index and stale-working-tree checks.
 
 ## 1.0.2

@@ -7,6 +7,7 @@ import {
   buildWorkingTreeDiffContext,
   ChangedFile,
   getGitApi,
+  getPendingChangedFiles,
   getWorkingTreeFingerprint,
   gitAddPaths,
   gitCommitWithMessage,
@@ -77,6 +78,11 @@ class PlannedCommitsController implements
   readonly onDidChangeTreeData = this.onDidChangeTreeDataEmitter.event;
 
   private readonly tree: vscode.TreeView<PlanItem>;
+  private planRepositoryChangeDisposable: vscode.Disposable | undefined;
+  private syncTimer: ReturnType<typeof setTimeout> | undefined;
+  private syncInProgress = false;
+  private syncQueued = false;
+  private suppressPlanSync = false;
   private plan: PlannedCommitPlan | undefined;
 
   constructor(
@@ -92,6 +98,10 @@ class PlannedCommitsController implements
   }
 
   dispose(): void {
+    this.planRepositoryChangeDisposable?.dispose();
+    if (this.syncTimer) {
+      clearTimeout(this.syncTimer);
+    }
     this.tree.dispose();
     this.onDidChangeTreeDataEmitter.dispose();
   }
@@ -186,7 +196,7 @@ class PlannedCommitsController implements
           const cancellation = token.onCancellationRequested(() => abortController.abort());
 
           try {
-            const settings = getSettings();
+            const settings = getSettings(repository.rootUri);
             const logger = createLogger(this.output);
             const diffContext = await buildWorkingTreeDiffContext(repository, settings);
             const fingerprint = await getWorkingTreeFingerprint(repository);
@@ -242,6 +252,7 @@ class PlannedCommitsController implements
               files,
               commits
             };
+            this.watchPlanRepository(repository);
             this.refresh();
             vscode.window.showInformationMessage(`Planned ${commits.length} commit${commits.length === 1 ? '' : 's'}.`);
           } finally {
@@ -253,13 +264,31 @@ class PlannedCommitsController implements
   }
 
   async regeneratePlan(): Promise<void> {
+    const hadPlan = Boolean(this.plan);
+
+    if (hadPlan) {
+      await this.runWithErrors(async () => {
+        await this.reconcilePlanWithPendingChanges();
+
+        if (!this.plan) {
+          vscode.window.showInformationMessage('Commit plan cleared because its files no longer have pending changes.');
+        }
+      });
+
+      if (!this.plan) {
+        return;
+      }
+    }
+
     await this.planCommits();
   }
 
   async commitPlannedCommits(): Promise<void> {
     await this.runWithErrors(async () => {
+      await this.reconcilePlanWithPendingChanges();
+
       if (!this.plan) {
-        throw new Error('No planned commits to commit.');
+        throw new Error('No commit plan to commit.');
       }
 
       const plan = this.plan;
@@ -272,7 +301,7 @@ class PlannedCommitsController implements
       await vscode.window.withProgress(
         {
           location: vscode.ProgressLocation.Notification,
-          title: 'Committing planned commits',
+          title: 'Committing plan',
           cancellable: false
         },
         async progress => {
@@ -286,6 +315,7 @@ class PlannedCommitsController implements
           const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'opencommit-'));
 
           try {
+            this.suppressPlanSync = true;
             for (let index = 0; index < plan.commits.length; index += 1) {
               const commit = plan.commits[index];
               const message = sanitizeCommitMessage(commit.message);
@@ -305,24 +335,24 @@ class PlannedCommitsController implements
             }
           } catch (error) {
             throw new Error(
-              `Failed while committing planned commits. Earlier commits may already exist. ${error instanceof Error ? error.message : String(error)}`
+              `Failed while committing the plan. Earlier commits may already exist. ${error instanceof Error ? error.message : String(error)}`
             );
           } finally {
+            this.suppressPlanSync = false;
             await fs.rm(tempDir, { recursive: true, force: true });
           }
         }
       );
 
       const count = plan.commits.length;
-      this.plan = undefined;
-      this.refresh();
-      vscode.window.showInformationMessage(`Created ${count} planned commit${count === 1 ? '' : 's'}.`);
+      this.clearPlan();
+      vscode.window.showInformationMessage(`Created ${count} commit${count === 1 ? '' : 's'} from the plan.`);
     });
   }
 
   async editCommitMessage(item?: PlanItem): Promise<void> {
     await this.runWithErrors(async () => {
-      const commit = await this.pickCommit(item, 'Select planned commit to edit');
+      const commit = await this.pickCommit(item, 'Select commit group to edit');
 
       if (!commit) {
         return;
@@ -330,7 +360,7 @@ class PlannedCommitsController implements
 
       const value = await vscode.window.showInputBox({
         title: 'Edit Commit Message',
-        prompt: 'Enter the commit message for this planned commit.',
+        prompt: 'Enter the commit message for this commit group.',
         value: commit.message,
         ignoreFocusOut: true,
         validateInput: text => text.trim() ? undefined : 'Commit message is required.'
@@ -348,11 +378,13 @@ class PlannedCommitsController implements
 
   async regenerateCommitMessage(item?: PlanItem): Promise<void> {
     await this.runWithErrors(async () => {
+      await this.reconcilePlanWithPendingChanges();
+
       if (!this.plan) {
-        throw new Error('No planned commits to regenerate.');
+        throw new Error('No commit plan to regenerate.');
       }
 
-      const commit = await this.pickCommit(item, 'Select planned commit to regenerate');
+      const commit = await this.pickCommit(item, 'Select commit group to regenerate');
 
       if (!commit) {
         return;
@@ -379,7 +411,7 @@ class PlannedCommitsController implements
           const cancellation = token.onCancellationRequested(() => abortController.abort());
 
           try {
-            const settings = getSettings();
+            const settings = getSettings(this.plan!.repository.rootUri);
             const logger = createLogger(this.output);
             const messages = buildPlannedCommitMessageMessages({
               diff: this.plan!.diffContext.diff,
@@ -414,8 +446,10 @@ class PlannedCommitsController implements
 
   async moveFile(item?: PlanItem): Promise<void> {
     await this.runWithErrors(async () => {
+      await this.reconcilePlanWithPendingChanges();
+
       if (!this.plan) {
-        throw new Error('No planned commits to edit.');
+        throw new Error('No commit plan to edit.');
       }
 
       const fileItem = item instanceof FileTreeItem ? item : await this.pickFile();
@@ -433,7 +467,7 @@ class PlannedCommitsController implements
         }));
 
       if (choices.length === 0) {
-        throw new Error('Add another planned commit before moving files.');
+        throw new Error('Add another commit group before moving files.');
       }
 
       const picked = await vscode.window.showQuickPick(choices, {
@@ -451,13 +485,15 @@ class PlannedCommitsController implements
 
   async addCommit(): Promise<void> {
     await this.runWithErrors(async () => {
+      await this.reconcilePlanWithPendingChanges();
+
       if (!this.plan) {
-        throw new Error('Generate a plan before adding a planned commit.');
+        throw new Error('Generate a plan before adding a commit group.');
       }
 
       const message = await vscode.window.showInputBox({
-        title: 'Add Planned Commit',
-        prompt: 'Enter a commit message. Move files into this commit afterward.',
+        title: 'Add Commit Group',
+        prompt: 'Enter a commit message. Move files into this group afterward.',
         value: 'chore: update related changes',
         ignoreFocusOut: true,
         validateInput: text => text.trim() ? undefined : 'Commit message is required.'
@@ -480,17 +516,18 @@ class PlannedCommitsController implements
   async removeCommit(item?: PlanItem): Promise<void> {
     await this.runWithErrors(async () => {
       if (!this.plan) {
-        throw new Error('No planned commits to remove.');
+        throw new Error('No commit plan to remove from.');
       }
 
-      const commit = await this.pickCommit(item, 'Select planned commit to remove');
+      const commit = await this.pickCommit(item, 'Select commit group to remove');
 
       if (!commit) {
         return;
       }
 
       if (this.plan.commits.length === 1) {
-        throw new Error('Cannot remove the only planned commit.');
+        this.clearPlan();
+        return;
       }
 
       const target = this.plan.commits.find(candidate => candidate.id !== commit.id);
@@ -508,6 +545,130 @@ class PlannedCommitsController implements
 
   private refresh(): void {
     this.onDidChangeTreeDataEmitter.fire(undefined);
+  }
+
+  private clearPlan(): void {
+    this.plan = undefined;
+    this.planRepositoryChangeDisposable?.dispose();
+    this.planRepositoryChangeDisposable = undefined;
+    if (this.syncTimer) {
+      clearTimeout(this.syncTimer);
+      this.syncTimer = undefined;
+    }
+    this.refresh();
+  }
+
+  private watchPlanRepository(repository: Repository): void {
+    this.planRepositoryChangeDisposable?.dispose();
+    this.planRepositoryChangeDisposable = repository.state.onDidChange?.(() => this.schedulePlanSync());
+  }
+
+  private schedulePlanSync(): void {
+    if (this.suppressPlanSync) {
+      return;
+    }
+
+    if (this.syncTimer) {
+      clearTimeout(this.syncTimer);
+    }
+
+    this.syncTimer = setTimeout(() => {
+      this.syncTimer = undefined;
+      void this.syncPlanWithPendingChanges();
+    }, 300);
+  }
+
+  private async syncPlanWithPendingChanges(): Promise<void> {
+    try {
+      await this.reconcilePlanWithPendingChanges();
+    } catch (error) {
+      createLogger(this.output).error(error);
+    }
+  }
+
+  private async reconcilePlanWithPendingChanges(): Promise<void> {
+    if (!this.plan || this.suppressPlanSync) {
+      return;
+    }
+
+    if (this.syncInProgress) {
+      this.syncQueued = true;
+      return;
+    }
+
+    this.syncInProgress = true;
+
+    try {
+      do {
+        this.syncQueued = false;
+        await this.applyPendingChangesToPlan();
+      } while (this.syncQueued);
+    } finally {
+      this.syncInProgress = false;
+    }
+  }
+
+  private async applyPendingChangesToPlan(): Promise<void> {
+    const plan = this.plan;
+
+    if (!plan) {
+      return;
+    }
+
+    const pendingFiles = await getPendingChangedFiles(plan.repository);
+    const pendingByPath = new Map(pendingFiles.map(file => [file.path, file]));
+    let changed = false;
+
+    const plannedPaths = new Set(plan.commits.flatMap(commit => commit.files));
+    plan.files = pendingFiles.filter(file => plannedPaths.has(file.path));
+
+    for (const commit of plan.commits) {
+      const previousLength = commit.files.length;
+      commit.files = commit.files.filter(filePath => pendingByPath.has(filePath));
+
+      if (commit.files.length !== previousLength) {
+        commit.messageStale = commit.files.length > 0;
+        changed = true;
+      }
+    }
+
+    const previousCommitCount = plan.commits.length;
+    plan.commits = plan.commits.filter(commit => commit.files.length > 0);
+
+    if (plan.commits.length !== previousCommitCount) {
+      changed = true;
+    }
+
+    if (plan.commits.length === 0) {
+      this.clearPlan();
+      return;
+    }
+
+    const fingerprint = await getWorkingTreeFingerprint(plan.repository);
+    if (fingerprint !== plan.fingerprint) {
+      plan.fingerprint = fingerprint;
+      changed = true;
+    }
+
+    if (pendingFiles.length > 0) {
+      try {
+        const settings = getSettings(plan.repository.rootUri);
+        const diffContext = await buildWorkingTreeDiffContext(plan.repository, settings);
+        const fileStatusByPath = new Map(diffContext.files.map(file => [file.path, file.status]));
+        plan.diffContext = diffContext;
+        plan.files = plan.files.map(file => ({
+          ...file,
+          status: fileStatusByPath.get(file.path) ?? file.status
+        }));
+      } catch {
+        // Keep the file-level reconciliation when the index is temporarily staged
+        // during a manual commit or the remaining pending changes are staged only.
+      }
+    }
+
+    if (changed) {
+      this.refresh();
+    }
   }
 
   private findCommit(id: string): PlannedCommitGroup | undefined {
@@ -586,7 +747,7 @@ class PlannedCommitsController implements
       }))
     );
     const picked = await vscode.window.showQuickPick(items, {
-      title: 'Select Planned Commit File'
+      title: 'Select Commit Planner File'
     });
 
     return picked?.item;
@@ -656,7 +817,7 @@ function validatePlan(
   expectedFiles: readonly string[]
 ): PlannedCommitGroup[] {
   if (!parsed || parsed.length === 0) {
-    throw new Error('OpenRouter did not return a valid planned commit JSON object.');
+    throw new Error('OpenRouter did not return a valid commit plan JSON object.');
   }
 
   const expected = new Set(expectedFiles);
@@ -723,7 +884,7 @@ function createGroupId(): string {
 }
 
 function firstLine(value: string): string {
-  return value.split(/\r?\n/)[0]?.trim() || 'Untitled planned commit';
+  return value.split(/\r?\n/)[0]?.trim() || 'Untitled commit group';
 }
 
 function unique(values: readonly string[]): string[] {

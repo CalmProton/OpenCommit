@@ -25,8 +25,8 @@ export interface ExtensionSettings {
   debugLogging: boolean;
 }
 
-export function getSettings(): ExtensionSettings {
-  const config = vscode.workspace.getConfiguration('opencommit');
+export function getSettings(resource?: vscode.Uri): ExtensionSettings {
+  const config = vscode.workspace.getConfiguration('opencommit', resource);
 
   return {
     provider: config.get<'openrouter'>('provider', 'openrouter'),

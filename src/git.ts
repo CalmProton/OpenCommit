@@ -42,6 +42,7 @@ export interface Repository {
     readonly indexChanges: Change[];
     readonly workingTreeChanges: Change[];
     readonly untrackedChanges: Change[];
+    readonly onDidChange?: vscode.Event<void>;
   };
   readonly ui: {
     readonly selected: boolean;
@@ -235,14 +236,26 @@ export async function getWorkingTreeChangedFiles(repository: Repository): Promis
     }));
 }
 
+export async function getPendingChangedFiles(repository: Repository): Promise<ChangedFile[]> {
+  const status = await getStatusEntries(repository);
+
+  return status
+    .filter(entry => hasIndexChange(entry.xy) || hasWorkingTreeChange(entry.xy))
+    .map(entry => ({
+      path: entry.path,
+      status: statusDescription(entry.xy),
+      uri: vscode.Uri.file(path.join(repository.rootUri.fsPath, entry.path))
+    }));
+}
+
 export async function getWorkingTreeFingerprint(repository: Repository): Promise<string> {
-  const status = await gitExec(repository, ['status', '--porcelain=v1', '-z', '--']);
+  const status = await gitExec(repository, ['status', '--porcelain=v1', '-z', '-uall', '--']);
   return status.stdout;
 }
 
 export async function gitAddPaths(repository: Repository, paths: readonly string[]): Promise<void> {
   if (paths.length === 0) {
-    throw new Error('Cannot stage an empty planned commit.');
+    throw new Error('Cannot stage an empty commit group.');
   }
 
   for (const batch of chunkGitPaths(paths)) {
@@ -274,7 +287,7 @@ interface StatusEntry {
 }
 
 async function getStatusEntries(repository: Repository): Promise<StatusEntry[]> {
-  const { stdout } = await gitExec(repository, ['status', '--porcelain=v1', '-z', '--']);
+  const { stdout } = await gitExec(repository, ['status', '--porcelain=v1', '-z', '-uall', '--']);
   const parts = stdout.split('\0').filter(Boolean);
   const entries: StatusEntry[] = [];
 
@@ -308,6 +321,23 @@ function hasWorkingTreeChange(xy: string): boolean {
 function statusDescription(xy: string): string {
   if (xy === '??') {
     return 'UNTRACKED';
+  }
+
+  if (xy[1] === ' ') {
+    switch (xy[0]) {
+      case 'M':
+        return 'INDEX_MODIFIED';
+      case 'A':
+        return 'INDEX_ADDED';
+      case 'D':
+        return 'INDEX_DELETED';
+      case 'R':
+        return 'INDEX_RENAMED';
+      case 'C':
+        return 'INDEX_COPIED';
+      default:
+        return `INDEX_${xy[0] || 'UNKNOWN'}`;
+    }
   }
 
   switch (xy[1]) {

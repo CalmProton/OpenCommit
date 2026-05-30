@@ -2,7 +2,7 @@
   "name": "opencommit",
   "displayName": "OpenCommit",
   "description": "Free Conventional Commits generator for VS Code, powered by OpenRouter.",
-  "version": "1.1.0",
+  "version": "1.1.3",
   "publisher": "MadElectron",
   "license": "MIT",
   "repository": {
@@ -54,7 +54,7 @@
       },
       {
         "command": "opencommit.commitPlannedCommits",
-        "title": "Commit Planned Commits",
+        "title": "Commit Plan",
         "category": "OpenCommit",
         "icon": "$(check-all)"
       },
@@ -84,13 +84,13 @@
       },
       {
         "command": "opencommit.addPlannedCommit",
-        "title": "Add Planned Commit",
+        "title": "Add Commit Group",
         "category": "OpenCommit",
         "icon": "$(add)"
       },
       {
         "command": "opencommit.removePlannedCommit",
-        "title": "Remove Planned Commit",
+        "title": "Remove Commit Group",
         "category": "OpenCommit",
         "icon": "$(trash)"
       }
@@ -99,15 +99,15 @@
       "scm": [
         {
           "id": "opencommit.plannedCommits",
-          "name": "Planned Commits",
-          "contextualTitle": "OpenCommit Planned Commits"
+          "name": "Commit Planner",
+          "contextualTitle": "OpenCommit Commit Planner"
         }
       ]
     },
     "viewsWelcome": [
       {
         "view": "opencommit.plannedCommits",
-        "contents": "Plan multiple AI-generated commits from unstaged changes.\n[Plan Commits](command:opencommit.planCommits)",
+        "contents": "Use Commit Planner to split unstaged changes into multiple AI-generated commits.\n[Plan Commits](command:opencommit.planCommits)",
         "when": "config.git.enabled"
       }
     ],

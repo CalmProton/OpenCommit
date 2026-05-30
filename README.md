@@ -12,19 +12,19 @@ VSCode extension for generating commit messages based on Conventional Commits sp
 - Supports workspace settings in `.vscode/settings.json`.
 - Writes generation summaries to the `OpenCommit` output channel, with optional verbose diagnostics.
 - Generates Conventional Commits messages by default, such as `fix(api): correct pagination offset`.
-- Adds a `Planned Commits` Source Control view for splitting unstaged changes into multiple AI-planned commits.
+- Adds a `Commit Planner` Source Control view for splitting unstaged changes into multiple AI-generated commits.
 
 ## Commands
 
 - `OpenCommit: Generate`
 - `OpenCommit: Plan Commits`
-- `OpenCommit: Commit Planned Commits`
+- `OpenCommit: Commit Plan`
 - `OpenCommit: Regenerate Plan`
 - `OpenCommit: Edit Commit Message`
 - `OpenCommit: Regenerate Commit Message`
 - `OpenCommit: Move File to Commit`
-- `OpenCommit: Add Planned Commit`
-- `OpenCommit: Remove Planned Commit`
+- `OpenCommit: Add Commit Group`
+- `OpenCommit: Remove Commit Group`
 - `OpenCommit: Set OpenRouter API Key`
 - `OpenCommit: Clear OpenRouter API Key`
 
@@ -72,11 +72,11 @@ The extension does not fetch OpenRouter model metadata. Instead, it assumes a co
 
 Diff content is budgeted from this token limit with room reserved for instructions and model output. Large diffs are split by file patch and truncated at patch boundaries where possible. `opencommit.maxDiffChars` is an optional extra cap; leave it at `0` to use token budgeting.
 
-## Planned Commits
+## Commit Planner
 
-Use `OpenCommit: Plan Commits` or the `Planned Commits` Source Control view to split unstaged and untracked changes into multiple whole-file commits. OpenCommit requires a clean index for this workflow; unstage existing staged changes before planning or committing.
+Use `OpenCommit: Plan Commits` or the `Commit Planner` Source Control view to split unstaged and untracked changes into multiple whole-file commits. OpenCommit requires a clean index for this workflow; unstage existing staged changes before planning or committing.
 
-After a plan is generated, you can move files between planned commits with drag and drop or `OpenCommit: Move File to Commit`, edit commit messages, regenerate individual messages, add empty planned commits, or remove planned commits. `OpenCommit: Commit Planned Commits` rechecks that the index is clean and the working tree has not changed since planning, then stages and commits each group in order.
+After a plan is generated, you can move files between commit groups with drag and drop or `OpenCommit: Move File to Commit`, edit commit messages, regenerate individual messages, add empty commit groups, or remove commit groups. `OpenCommit: Commit Plan` rechecks that the index is clean and the working tree has not changed since planning, then stages and commits each group in order.
 
 ## Settings UI
 

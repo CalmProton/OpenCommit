@@ -28,7 +28,6 @@ export function deactivate(): void {
 
 async function generateCommitMessage(context: vscode.ExtensionContext): Promise<void> {
   try {
-    const settings = getSettings();
     const apiKey = await ensureOpenRouterApiKey(context);
 
     if (!apiKey) {
@@ -41,6 +40,8 @@ async function generateCommitMessage(context: vscode.ExtensionContext): Promise<
     if (!repository) {
       return;
     }
+
+    const settings = getSettings(repository.rootUri);
 
     await vscode.window.withProgress(
       {
