@@ -197,8 +197,12 @@ class PlannedCommitsController implements
 
           try {
             const settings = getSettings(repository.rootUri);
+            const planSettings = {
+              ...settings,
+              maxOutputTokens: settings.maxPlanOutputTokens
+            };
             const logger = createLogger(this.output);
-            const diffContext = await buildWorkingTreeDiffContext(repository, settings);
+            const diffContext = await buildWorkingTreeDiffContext(repository, planSettings);
             const fingerprint = await getWorkingTreeFingerprint(repository);
             const files = diffContext.files.map(file => ({
               path: file.path,
@@ -212,7 +216,7 @@ class PlannedCommitsController implements
               allFiles: diffContext.files,
               budget: diffContext.budget,
               truncated: diffContext.truncated,
-              settings
+              settings: planSettings
             });
 
             logger.section('Multi-commit planning started');
@@ -223,7 +227,8 @@ class PlannedCommitsController implements
               repository: repository.rootUri.fsPath,
               files: diffContext.files,
               diffChars: diffContext.diff.length,
-              truncated: diffContext.truncated
+              truncated: diffContext.truncated,
+              maxPlanOutputTokens: settings.maxPlanOutputTokens
             });
 
             if (settings.debugLogging) {
@@ -231,7 +236,7 @@ class PlannedCommitsController implements
               logger.json('Messages sent to OpenRouter', messages);
             }
 
-            const result = await createOpenRouterCommitMessage(apiKey, messages, settings, abortController.signal);
+            const result = await createOpenRouterCommitMessage(apiKey, messages, planSettings, abortController.signal);
             const parsed = parsePlannedCommits(result.text);
 
             if (settings.debugLogging) {

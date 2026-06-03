@@ -43,6 +43,7 @@ Example `.vscode/settings.json`:
   "opencommit.maxPromptTokens": 0,
   "opencommit.maxDiffChars": 0,
   "opencommit.maxOutputTokens": 800,
+  "opencommit.maxPlanOutputTokens": 32000,
   "opencommit.debugLogging": false,
   "opencommit.customInstructions": "Use concise commit messages. Avoid mentioning generated files unless they are the main change."
 }
@@ -52,7 +53,7 @@ Do not store API keys in workspace settings. Run `OpenCommit: Set OpenRouter API
 
 `opencommit.format` defaults to `conventional`. Set it to `simple` or `custom` only if a workspace needs a different style.
 
-The extension disables reasoning tokens by default because commit messages do not need hidden reasoning budgets. If OpenRouter still returns no message content, try increasing `opencommit.maxOutputTokens` or choose a concrete non-reasoning model instead of `openrouter/auto`.
+The extension disables reasoning tokens by default because commit messages do not need hidden reasoning budgets. If OpenRouter still returns no message content, try increasing `opencommit.maxOutputTokens` or choose a concrete non-reasoning model instead of `openrouter/auto`. Commit Planner uses `opencommit.maxPlanOutputTokens` because large plans need more room for JSON file lists.
 
 ## Conventional Commits
 
@@ -75,6 +76,8 @@ Diff content is budgeted from this token limit with room reserved for instructio
 ## Commit Planner
 
 Use `OpenCommit: Plan Commits` or the `Commit Planner` Source Control view to split unstaged and untracked changes into multiple whole-file commits. OpenCommit requires a clean index for this workflow; unstage existing staged changes before planning or committing.
+
+The planner requests up to `opencommit.maxPlanOutputTokens` output tokens, defaulting to `32000`, so very large plans have room to return complete JSON. This value is also reserved from the prompt budget before diff compaction.
 
 After a plan is generated, you can move files between commit groups with drag and drop or `OpenCommit: Move File to Commit`, edit commit messages, regenerate individual messages, add empty commit groups, or remove commit groups. `OpenCommit: Commit Plan` rechecks that the index is clean and the working tree has not changed since planning, then stages and commits each group in order.
 

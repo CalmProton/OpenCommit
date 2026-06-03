@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.4
+
+- Raise the configurable output-token ceiling to `128000`.
+- Add `opencommit.maxPlanOutputTokens` so Commit Planner can request much larger JSON plans without increasing the default token budget for single commit messages.
+
 ## 1.1.3
 
 - Refresh Commit Planner state when Git changes are committed elsewhere, removing only files that no longer have pending changes.

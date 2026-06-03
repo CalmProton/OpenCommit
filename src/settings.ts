@@ -22,6 +22,7 @@ export interface ExtensionSettings {
   language: string;
   temperature: number;
   maxOutputTokens: number;
+  maxPlanOutputTokens: number;
   debugLogging: boolean;
 }
 
@@ -47,6 +48,7 @@ export function getSettings(resource?: vscode.Uri): ExtensionSettings {
     language: config.get<string>('language', 'en'),
     temperature: config.get<number>('temperature', 0.2),
     maxOutputTokens: config.get<number>('maxOutputTokens', 800),
+    maxPlanOutputTokens: config.get<number>('maxPlanOutputTokens', 32000),
     debugLogging: config.get<boolean>('debugLogging', false)
   };
 }
