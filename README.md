@@ -79,6 +79,8 @@ Use `OpenCommit: Plan Commits` or the `Commit Planner` Source Control view to sp
 
 The planner requests up to `opencommit.maxPlanOutputTokens` output tokens, defaulting to `32000`, so very large plans have room to return complete JSON. This value is also reserved from the prompt budget before diff compaction.
 
+If the model returns an incomplete plan, OpenCommit asks it to repair the plan using the exact missing, duplicate, and unknown file lists. If repair still fails, OpenCommit completes the plan locally by preserving valid groups and adding any remaining files to related or fallback groups marked as needing message review.
+
 After a plan is generated, you can move files between commit groups with drag and drop or `OpenCommit: Move File to Commit`, edit commit messages, regenerate individual messages, add empty commit groups, or remove commit groups. `OpenCommit: Commit Plan` rechecks that the index is clean and the working tree has not changed since planning, then stages and commits each group in order.
 
 ## Settings UI

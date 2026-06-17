@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Repair invalid Commit Planner JSON by asking the model to correct missing, duplicate, or unknown files before falling back to a local completion pass.
+
 ## 1.1.4
 
 - Raise the configurable output-token ceiling to `128000`.

@@ -14,18 +14,20 @@ import {
   pickRepository,
   Repository
 } from './git';
-import { createLogger } from './logger';
+import { createLogger, Logger } from './logger';
 import { createOpenRouterCommitMessage, OpenRouterResponseError } from './openrouter';
 import {
   buildPlannedCommitMessageMessages,
   buildPlanMessages,
+  buildPlanRepairMessages,
   parsePlannedCommits,
   sanitizeCommitMessage
 } from './prompt';
-import { getSettings } from './settings';
+import { ExtensionSettings, getSettings } from './settings';
 
 const TREE_ID = 'opencommit.plannedCommits';
 const FILE_TRANSFER_MIME = 'application/vnd.opencommit.planned-commit-files';
+const PLAN_REPAIR_ATTEMPTS = 2;
 
 interface PlannedCommitGroup {
   id: string;
@@ -42,6 +44,20 @@ interface PlannedCommitPlan {
   files: ChangedFile[];
   commits: PlannedCommitGroup[];
 }
+
+interface PlanValidationIssues {
+  unknown: string[];
+  duplicate: string[];
+  missing: string[];
+}
+
+interface PlanValidationResult {
+  valid: boolean;
+  issues: PlanValidationIssues;
+  message: string;
+}
+
+type PlanChangedFile = { path: string; status: string };
 
 type PlanItem = CommitTreeItem | FileTreeItem;
 
@@ -248,7 +264,18 @@ class PlannedCommitsController implements
               logger.json('OpenRouter response summary', result.response.choiceSummary);
             }
 
-            const commits = validatePlan(parsed, diffContext.files.map(file => file.path));
+            const expectedFiles = diffContext.files.map(file => file.path);
+            const commits = await buildValidatedPlan({
+              apiKey,
+              settings: planSettings,
+              allFiles: diffContext.files,
+              initialPlanText: result.text,
+              initialParsedPlan: parsed,
+              expectedFiles,
+              logger,
+              debugLogging: settings.debugLogging,
+              signal: abortController.signal
+            });
             this.plan = {
               repository,
               repositoryRoot: repository.rootUri.fsPath,
@@ -817,28 +844,154 @@ class FileTreeItem extends vscode.TreeItem {
   }
 }
 
-function validatePlan(
+async function buildValidatedPlan(input: {
+  apiKey: string;
+  settings: ExtensionSettings;
+  allFiles: readonly PlanChangedFile[];
+  initialPlanText: string;
+  initialParsedPlan: Array<{ message: string; files: string[] }> | undefined;
+  expectedFiles: readonly string[];
+  logger: Logger;
+  debugLogging: boolean;
+  signal: AbortSignal;
+}): Promise<PlannedCommitGroup[]> {
+  let planText = input.initialPlanText;
+  let parsedPlan = input.initialParsedPlan;
+  let validation = analyzePlan(parsedPlan, input.expectedFiles);
+
+  if (validation.valid && parsedPlan) {
+    return toPlannedCommitGroups(parsedPlan);
+  }
+
+  input.logger.section('Commit plan validation failed');
+  input.logger.json('Validation summary', summarizeValidation(validation));
+
+  for (let attempt = 1; attempt <= PLAN_REPAIR_ATTEMPTS; attempt += 1) {
+    const repaired = await requestPlanRepair({
+      apiKey: input.apiKey,
+      settings: input.settings,
+      allFiles: input.allFiles,
+      planText,
+      parsedPlan,
+      validation,
+      logger: input.logger,
+      debugLogging: input.debugLogging,
+      signal: input.signal,
+      attempt
+    });
+
+    if (!repaired) {
+      break;
+    }
+
+    planText = repaired.text;
+    parsedPlan = parsePlannedCommits(repaired.text);
+    validation = analyzePlan(parsedPlan, input.expectedFiles);
+
+    if (validation.valid && parsedPlan) {
+      input.logger.line(`Commit plan repair attempt ${attempt} produced a valid plan.`);
+      return toPlannedCommitGroups(parsedPlan);
+    }
+
+    input.logger.json(`Commit plan repair attempt ${attempt} still invalid`, summarizeValidation(validation));
+  }
+
+  input.logger.section('Commit plan repaired locally');
+  input.logger.json('Final validation issue before local repair', summarizeValidation(validation));
+  return completePlanLocally(parsedPlan, input.expectedFiles);
+}
+
+async function requestPlanRepair(input: {
+  apiKey: string;
+  settings: ExtensionSettings;
+  allFiles: readonly PlanChangedFile[];
+  planText: string;
+  parsedPlan: Array<{ message: string; files: string[] }> | undefined;
+  validation: PlanValidationResult;
+  logger: Logger;
+  debugLogging: boolean;
+  signal: AbortSignal;
+  attempt: number;
+}): Promise<{ text: string } | undefined> {
+  const messages = buildPlanRepairMessages({
+    allFiles: input.allFiles,
+    invalidPlanText: input.planText,
+    parsedPlan: input.parsedPlan,
+    missingFiles: input.validation.issues.missing,
+    unknownFiles: input.validation.issues.unknown,
+    duplicateFiles: input.validation.issues.duplicate,
+    settings: input.settings
+  });
+
+  input.logger.section(`Commit plan repair attempt ${input.attempt}`);
+  if (input.debugLogging) {
+    input.logger.json('Repair messages sent to OpenRouter', messages);
+  }
+
+  try {
+    const result = await createOpenRouterCommitMessage(input.apiKey, messages, input.settings, input.signal);
+
+    if (input.debugLogging) {
+      input.logger.json('OpenRouter repair request', result.request);
+      input.logger.json('OpenRouter repair response summary', result.response.choiceSummary);
+      input.logger.text('OpenRouter repair raw response body', result.response.bodyText);
+      input.logger.text('Extracted repair model text', result.text);
+    } else {
+      input.logger.json('OpenRouter repair response summary', result.response.choiceSummary);
+    }
+
+    return { text: result.text };
+  } catch (error) {
+    if (input.signal.aborted) {
+      throw error;
+    }
+
+    input.logger.error(error);
+
+    if (error instanceof OpenRouterResponseError) {
+      input.logger.section('OpenRouter repair failure diagnostics');
+      input.logger.json('OpenRouter repair request', error.request);
+      input.logger.json('OpenRouter repair response summary', error.response.choiceSummary);
+      input.logger.text('OpenRouter repair raw response body', error.response.bodyText);
+    }
+
+    return undefined;
+  }
+}
+
+function analyzePlan(
   parsed: Array<{ message: string; files: string[] }> | undefined,
   expectedFiles: readonly string[]
-): PlannedCommitGroup[] {
+): PlanValidationResult {
+  const issues: PlanValidationIssues = {
+    unknown: [],
+    duplicate: [],
+    missing: []
+  };
+
   if (!parsed || parsed.length === 0) {
-    throw new Error('OpenRouter did not return a valid commit plan JSON object.');
+    return {
+      valid: false,
+      issues: {
+        ...issues,
+        missing: [...expectedFiles]
+      },
+      message: 'OpenRouter did not return a valid commit plan JSON object.'
+    };
   }
 
   const expected = new Set(expectedFiles);
   const seen = new Set<string>();
-  const unknown: string[] = [];
-  const duplicate: string[] = [];
 
   for (const commit of parsed) {
     for (const filePath of commit.files) {
       if (!expected.has(filePath)) {
-        unknown.push(filePath);
+        issues.unknown.push(filePath);
         continue;
       }
 
       if (seen.has(filePath)) {
-        duplicate.push(filePath);
+        issues.duplicate.push(filePath);
         continue;
       }
 
@@ -846,25 +999,150 @@ function validatePlan(
     }
   }
 
-  const missing = expectedFiles.filter(filePath => !seen.has(filePath));
+  issues.missing = expectedFiles.filter(filePath => !seen.has(filePath));
 
-  if (unknown.length > 0 || duplicate.length > 0 || missing.length > 0) {
-    throw new Error(
-      [
+  const valid = issues.unknown.length === 0 && issues.duplicate.length === 0 && issues.missing.length === 0;
+
+  return {
+    valid,
+    issues,
+    message: valid
+      ? 'Commit plan is valid.'
+      : [
         'OpenRouter returned an invalid commit plan.',
-        unknown.length > 0 ? `Unknown files: ${unknown.join(', ')}` : '',
-        duplicate.length > 0 ? `Duplicate files: ${duplicate.join(', ')}` : '',
-        missing.length > 0 ? `Missing files: ${missing.join(', ')}` : ''
+        issues.unknown.length > 0 ? `Unknown files: ${issues.unknown.length}` : '',
+        issues.duplicate.length > 0 ? `Duplicate files: ${issues.duplicate.length}` : '',
+        issues.missing.length > 0 ? `Missing files: ${issues.missing.length}` : ''
       ].filter(Boolean).join(' ')
-    );
+  };
+}
+
+function completePlanLocally(
+  parsed: Array<{ message: string; files: string[] }> | undefined,
+  expectedFiles: readonly string[]
+): PlannedCommitGroup[] {
+  const expected = new Set(expectedFiles);
+  const seen = new Set<string>();
+  const commits: PlannedCommitGroup[] = [];
+
+  for (const commit of parsed ?? []) {
+    const files = commit.files.filter(filePath => {
+      if (!expected.has(filePath) || seen.has(filePath)) {
+        return false;
+      }
+
+      seen.add(filePath);
+      return true;
+    });
+
+    if (files.length > 0) {
+      commits.push({
+        id: createGroupId(),
+        message: commit.message,
+        files,
+        messageStale: false
+      });
+    }
   }
 
+  const unassigned: string[] = [];
+  for (const filePath of expectedFiles) {
+    if (!seen.has(filePath) && !assignToRelatedCommit(filePath, commits)) {
+      unassigned.push(filePath);
+    }
+  }
+
+  if (unassigned.length > 0) {
+    commits.push({
+      id: createGroupId(),
+      message: 'chore: update remaining changed files',
+      files: unassigned,
+      messageStale: true
+    });
+  }
+
+  return commits.length > 0
+    ? commits
+    : [{
+      id: createGroupId(),
+      message: 'chore: update changed files',
+      files: [...expectedFiles],
+      messageStale: true
+    }];
+}
+
+function assignToRelatedCommit(filePath: string, commits: PlannedCommitGroup[]): boolean {
+  let bestCommit: PlannedCommitGroup | undefined;
+  let bestScore = 0;
+
+  for (const commit of commits) {
+    for (const existingFile of commit.files) {
+      const score = commonPathPrefixLength(filePath, existingFile);
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestCommit = commit;
+      }
+    }
+  }
+
+  if (!bestCommit || bestScore < 3) {
+    return false;
+  }
+
+  bestCommit.files.push(filePath);
+  bestCommit.messageStale = true;
+  return true;
+}
+
+function commonPathPrefixLength(left: string, right: string): number {
+  const leftParts = left.split(/[\\/]/);
+  const rightParts = right.split(/[\\/]/);
+  const maxParts = Math.min(leftParts.length, rightParts.length);
+  let score = 0;
+
+  for (let index = 0; index < maxParts; index += 1) {
+    if (leftParts[index] !== rightParts[index]) {
+      break;
+    }
+
+    score += 1;
+  }
+
+  return score;
+}
+
+function toPlannedCommitGroups(parsed: Array<{ message: string; files: string[] }>): PlannedCommitGroup[] {
   return parsed.map(commit => ({
     id: createGroupId(),
     message: commit.message,
     files: commit.files,
     messageStale: false
   }));
+}
+
+function summarizeValidation(validation: PlanValidationResult): Record<string, unknown> {
+  return {
+    valid: validation.valid,
+    message: validation.message,
+    unknownCount: validation.issues.unknown.length,
+    duplicateCount: validation.issues.duplicate.length,
+    missingCount: validation.issues.missing.length,
+    unknownFiles: truncateList(validation.issues.unknown),
+    duplicateFiles: truncateList(validation.issues.duplicate),
+    missingFiles: truncateList(validation.issues.missing)
+  };
+}
+
+function truncateList(values: readonly string[], limit = 25): string[] {
+  if (values.length <= limit) {
+    return [...values];
+  }
+
+  return [
+    ...values.slice(0, limit),
+    `... ${values.length - limit} more`
+  ];
 }
 
 function parseStringArray(raw: string | undefined): string[] {
