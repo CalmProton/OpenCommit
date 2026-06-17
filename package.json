@@ -2,7 +2,7 @@
   "name": "opencommit",
   "displayName": "OpenCommit",
   "description": "Free Conventional Commits generator for VS Code, powered by OpenRouter.",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "publisher": "MadElectron",
   "license": "MIT",
   "repository": {

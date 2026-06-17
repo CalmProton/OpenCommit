@@ -1,8 +1,9 @@
 # Changelog
 
-## Unreleased
+## 1.1.5
 
 - Repair invalid Commit Planner JSON by asking the model to correct missing, duplicate, or unknown files before falling back to a local completion pass.
+- Add explicit file-operation context so generated commit messages do not describe deleted files as additions.
 
 ## 1.1.4
 
