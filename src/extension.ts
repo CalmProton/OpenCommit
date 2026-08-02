@@ -11,13 +11,13 @@ let output: vscode.OutputChannel;
 const COMMIT_MESSAGE_REPAIR_ATTEMPTS = 2;
 
 export function activate(context: vscode.ExtensionContext): void {
-  output = vscode.window.createOutputChannel('OpenCommit');
+  output = vscode.window.createOutputChannel('Git Commit Planner');
 
   context.subscriptions.push(
     output,
-    vscode.commands.registerCommand('opencommit.generate', () => generateCommitMessage(context)),
-    vscode.commands.registerCommand('opencommit.setOpenRouterApiKey', () => promptForOpenRouterApiKey(context.secrets)),
-    vscode.commands.registerCommand('opencommit.clearOpenRouterApiKey', () => clearOpenRouterApiKey(context.secrets))
+    vscode.commands.registerCommand('gitCommitPlanner.generate', () => generateCommitMessage(context)),
+    vscode.commands.registerCommand('gitCommitPlanner.setOpenRouterApiKey', () => promptForOpenRouterApiKey(context.secrets)),
+    vscode.commands.registerCommand('gitCommitPlanner.clearOpenRouterApiKey', () => clearOpenRouterApiKey(context.secrets))
   );
 
   registerPlannedCommits(context, output, () => ensureOpenRouterApiKey(context));
@@ -120,7 +120,7 @@ async function generateCommitMessage(context: vscode.ExtensionContext): Promise<
             logger.text('Diff sent to OpenRouter', diffContext.diff);
             logger.json('Messages sent to OpenRouter', messages);
           } else {
-            logger.line('Enable opencommit.debugLogging for full diff, prompt, request, and response diagnostics.');
+            logger.line('Enable gitCommitPlanner.debugLogging for full diff, prompt, request, and response diagnostics.');
           }
 
           let result = await createOpenRouterCommitMessage(apiKey, messages, settings, abortController.signal);
@@ -187,7 +187,7 @@ async function generateCommitMessage(context: vscode.ExtensionContext): Promise<
 
     const message = error instanceof Error ? error.message : String(error);
     logger.error(error);
-    vscode.window.showErrorMessage(`OpenCommit: ${message}`);
+    vscode.window.showErrorMessage(`Git Commit Planner: ${message}`);
   }
 }
 

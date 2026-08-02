@@ -1,18 +1,18 @@
 {
-  "name": "opencommit",
-  "displayName": "OpenCommit",
-  "description": "Free Conventional Commits generator for VS Code, powered by OpenRouter.",
-  "version": "1.1.6",
+  "name": "git-commit-planner",
+  "displayName": "Git Commit Planner",
+  "description": "AI Git commit message generator and commit planner for VS Code, powered by OpenRouter.",
+  "version": "2.0.0",
   "publisher": "MadElectron",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/CalmProton/OpenCommit.git"
+    "url": "https://github.com/CalmProton/git-commit-planner.git"
   },
   "bugs": {
-    "url": "https://github.com/CalmProton/OpenCommit/issues"
+    "url": "https://github.com/CalmProton/git-commit-planner/issues"
   },
-  "homepage": "https://github.com/CalmProton/OpenCommit#readme",
+  "homepage": "https://github.com/CalmProton/git-commit-planner#readme",
   "packageManager": "bun@1.3.13",
   "engines": {
     "vscode": "^1.95.0"
@@ -23,6 +23,11 @@
   "keywords": [
     "git",
     "commit",
+    "commit message",
+    "commit message generator",
+    "git commit generator",
+    "conventional commits",
+    "commit planner",
     "source control",
     "openrouter",
     "ai"
@@ -31,204 +36,204 @@
   "contributes": {
     "commands": [
       {
-        "command": "opencommit.generate",
+        "command": "gitCommitPlanner.generate",
         "title": "Generate",
-        "category": "OpenCommit",
+        "category": "Git Commit Planner",
         "icon": "$(sparkle)"
       },
       {
-        "command": "opencommit.setOpenRouterApiKey",
+        "command": "gitCommitPlanner.setOpenRouterApiKey",
         "title": "Set OpenRouter API Key",
-        "category": "OpenCommit"
+        "category": "Git Commit Planner"
       },
       {
-        "command": "opencommit.clearOpenRouterApiKey",
+        "command": "gitCommitPlanner.clearOpenRouterApiKey",
         "title": "Clear OpenRouter API Key",
-        "category": "OpenCommit"
+        "category": "Git Commit Planner"
       },
       {
-        "command": "opencommit.planCommits",
+        "command": "gitCommitPlanner.planCommits",
         "title": "Plan Commits",
-        "category": "OpenCommit",
+        "category": "Git Commit Planner",
         "icon": "$(list-tree)"
       },
       {
-        "command": "opencommit.commitPlannedCommits",
+        "command": "gitCommitPlanner.commitPlannedCommits",
         "title": "Commit Plan",
-        "category": "OpenCommit",
+        "category": "Git Commit Planner",
         "icon": "$(check-all)"
       },
       {
-        "command": "opencommit.regeneratePlan",
+        "command": "gitCommitPlanner.regeneratePlan",
         "title": "Regenerate Plan",
-        "category": "OpenCommit",
+        "category": "Git Commit Planner",
         "icon": "$(refresh)"
       },
       {
-        "command": "opencommit.editPlannedCommitMessage",
+        "command": "gitCommitPlanner.editPlannedCommitMessage",
         "title": "Edit Commit Message",
-        "category": "OpenCommit",
+        "category": "Git Commit Planner",
         "icon": "$(edit)"
       },
       {
-        "command": "opencommit.regeneratePlannedCommitMessage",
+        "command": "gitCommitPlanner.regeneratePlannedCommitMessage",
         "title": "Regenerate Commit Message",
-        "category": "OpenCommit",
+        "category": "Git Commit Planner",
         "icon": "$(sparkle)"
       },
       {
-        "command": "opencommit.movePlannedCommitFile",
+        "command": "gitCommitPlanner.movePlannedCommitFile",
         "title": "Move File to Commit",
-        "category": "OpenCommit",
+        "category": "Git Commit Planner",
         "icon": "$(move)"
       },
       {
-        "command": "opencommit.addPlannedCommit",
+        "command": "gitCommitPlanner.addPlannedCommit",
         "title": "Add Commit Group",
-        "category": "OpenCommit",
+        "category": "Git Commit Planner",
         "icon": "$(add)"
       },
       {
-        "command": "opencommit.removePlannedCommit",
+        "command": "gitCommitPlanner.removePlannedCommit",
         "title": "Remove Commit Group",
-        "category": "OpenCommit",
+        "category": "Git Commit Planner",
         "icon": "$(trash)"
       }
     ],
     "views": {
       "scm": [
         {
-          "id": "opencommit.plannedCommits",
+          "id": "gitCommitPlanner.plannedCommits",
           "name": "Commit Planner",
-          "contextualTitle": "OpenCommit Commit Planner"
+          "contextualTitle": "Git Commit Planner"
         }
       ]
     },
     "viewsWelcome": [
       {
-        "view": "opencommit.plannedCommits",
-        "contents": "Use Commit Planner to split unstaged changes into multiple AI-generated commits.\n[Plan Commits](command:opencommit.planCommits)",
+        "view": "gitCommitPlanner.plannedCommits",
+        "contents": "Use Commit Planner to split unstaged changes into multiple AI-generated commits.\n[Plan Commits](command:gitCommitPlanner.planCommits)",
         "when": "config.git.enabled"
       }
     ],
     "menus": {
       "scm/title": [
         {
-          "command": "opencommit.generate",
+          "command": "gitCommitPlanner.generate",
           "when": "scmProvider == git",
           "group": "navigation@9"
         },
         {
-          "command": "opencommit.planCommits",
+          "command": "gitCommitPlanner.planCommits",
           "when": "scmProvider == git",
           "group": "navigation@10"
         }
       ],
       "scm/repository": [
         {
-          "command": "opencommit.generate",
+          "command": "gitCommitPlanner.generate",
           "when": "scmProvider == git",
           "group": "inline@9"
         },
         {
-          "command": "opencommit.planCommits",
+          "command": "gitCommitPlanner.planCommits",
           "when": "scmProvider == git",
           "group": "inline@10"
         }
       ],
       "view/title": [
         {
-          "command": "opencommit.planCommits",
-          "when": "view == opencommit.plannedCommits",
+          "command": "gitCommitPlanner.planCommits",
+          "when": "view == gitCommitPlanner.plannedCommits",
           "group": "navigation@1"
         },
         {
-          "command": "opencommit.commitPlannedCommits",
-          "when": "view == opencommit.plannedCommits",
+          "command": "gitCommitPlanner.commitPlannedCommits",
+          "when": "view == gitCommitPlanner.plannedCommits",
           "group": "navigation@2"
         },
         {
-          "command": "opencommit.regeneratePlan",
-          "when": "view == opencommit.plannedCommits",
+          "command": "gitCommitPlanner.regeneratePlan",
+          "when": "view == gitCommitPlanner.plannedCommits",
           "group": "navigation@3"
         },
         {
-          "command": "opencommit.addPlannedCommit",
-          "when": "view == opencommit.plannedCommits",
+          "command": "gitCommitPlanner.addPlannedCommit",
+          "when": "view == gitCommitPlanner.plannedCommits",
           "group": "navigation@4"
         }
       ],
       "view/item/context": [
         {
-          "command": "opencommit.editPlannedCommitMessage",
-          "when": "view == opencommit.plannedCommits && viewItem == opencommit.commit",
+          "command": "gitCommitPlanner.editPlannedCommitMessage",
+          "when": "view == gitCommitPlanner.plannedCommits && viewItem == gitCommitPlanner.commit",
           "group": "inline@1"
         },
         {
-          "command": "opencommit.regeneratePlannedCommitMessage",
-          "when": "view == opencommit.plannedCommits && viewItem == opencommit.commit",
+          "command": "gitCommitPlanner.regeneratePlannedCommitMessage",
+          "when": "view == gitCommitPlanner.plannedCommits && viewItem == gitCommitPlanner.commit",
           "group": "inline@2"
         },
         {
-          "command": "opencommit.removePlannedCommit",
-          "when": "view == opencommit.plannedCommits && viewItem == opencommit.commit",
+          "command": "gitCommitPlanner.removePlannedCommit",
+          "when": "view == gitCommitPlanner.plannedCommits && viewItem == gitCommitPlanner.commit",
           "group": "inline@3"
         },
         {
-          "command": "opencommit.movePlannedCommitFile",
-          "when": "view == opencommit.plannedCommits && viewItem == opencommit.file",
+          "command": "gitCommitPlanner.movePlannedCommitFile",
+          "when": "view == gitCommitPlanner.plannedCommits && viewItem == gitCommitPlanner.file",
           "group": "inline@1"
         }
       ],
       "commandPalette": [
         {
-          "command": "opencommit.generate",
+          "command": "gitCommitPlanner.generate",
           "when": "config.git.enabled"
         },
         {
-          "command": "opencommit.planCommits",
+          "command": "gitCommitPlanner.planCommits",
           "when": "config.git.enabled"
         },
         {
-          "command": "opencommit.commitPlannedCommits",
+          "command": "gitCommitPlanner.commitPlannedCommits",
           "when": "config.git.enabled"
         },
         {
-          "command": "opencommit.regeneratePlan",
+          "command": "gitCommitPlanner.regeneratePlan",
           "when": "config.git.enabled"
         },
         {
-          "command": "opencommit.editPlannedCommitMessage",
+          "command": "gitCommitPlanner.editPlannedCommitMessage",
           "when": "config.git.enabled"
         },
         {
-          "command": "opencommit.regeneratePlannedCommitMessage",
+          "command": "gitCommitPlanner.regeneratePlannedCommitMessage",
           "when": "config.git.enabled"
         },
         {
-          "command": "opencommit.movePlannedCommitFile",
+          "command": "gitCommitPlanner.movePlannedCommitFile",
           "when": "config.git.enabled"
         },
         {
-          "command": "opencommit.addPlannedCommit",
+          "command": "gitCommitPlanner.addPlannedCommit",
           "when": "config.git.enabled"
         },
         {
-          "command": "opencommit.removePlannedCommit",
+          "command": "gitCommitPlanner.removePlannedCommit",
           "when": "config.git.enabled"
         },
         {
-          "command": "opencommit.setOpenRouterApiKey"
+          "command": "gitCommitPlanner.setOpenRouterApiKey"
         },
         {
-          "command": "opencommit.clearOpenRouterApiKey"
+          "command": "gitCommitPlanner.clearOpenRouterApiKey"
         }
       ]
     },
     "configuration": {
-      "title": "OpenCommit",
+      "title": "Git Commit Planner",
       "properties": {
-        "opencommit.provider": {
+        "gitCommitPlanner.provider": {
           "type": "string",
           "scope": "resource",
           "enum": [
@@ -237,31 +242,31 @@
           "default": "openrouter",
           "description": "Provider used to generate commit messages."
         },
-        "opencommit.openRouter.baseUrl": {
+        "gitCommitPlanner.openRouter.baseUrl": {
           "type": "string",
           "scope": "resource",
           "default": "https://openrouter.ai/api/v1",
           "description": "OpenRouter API base URL."
         },
-        "opencommit.openRouter.model": {
+        "gitCommitPlanner.openRouter.model": {
           "type": "string",
           "scope": "resource",
           "default": "openrouter/auto",
           "description": "OpenRouter model id used for commit message generation."
         },
-        "opencommit.openRouter.siteUrl": {
+        "gitCommitPlanner.openRouter.siteUrl": {
           "type": "string",
           "scope": "resource",
           "default": "",
           "description": "Optional HTTP-Referer header value sent to OpenRouter."
         },
-        "opencommit.openRouter.appTitle": {
+        "gitCommitPlanner.openRouter.appTitle": {
           "type": "string",
           "scope": "resource",
-          "default": "OpenCommit VS Code Extension",
+          "default": "Git Commit Planner VS Code Extension",
           "description": "Optional X-Title header value sent to OpenRouter."
         },
-        "opencommit.format": {
+        "gitCommitPlanner.format": {
           "type": "string",
           "scope": "resource",
           "enum": [
@@ -272,7 +277,7 @@
           "default": "conventional",
           "description": "Commit message style. Conventional Commits is the default standard."
         },
-        "opencommit.includeBody": {
+        "gitCommitPlanner.includeBody": {
           "type": "string",
           "scope": "resource",
           "enum": [
@@ -283,27 +288,27 @@
           "default": "auto",
           "description": "Whether generated commit messages should include a body."
         },
-        "opencommit.customInstructions": {
+        "gitCommitPlanner.customInstructions": {
           "type": "string",
           "scope": "resource",
           "default": "",
-          "markdownDescription": "Additional prompt instructions. Used together with built-in rules, and especially useful when `opencommit.format` is `custom`."
+          "markdownDescription": "Additional prompt instructions. Used together with built-in rules, and especially useful when `gitCommitPlanner.format` is `custom`."
         },
-        "opencommit.preferStaged": {
+        "gitCommitPlanner.preferStaged": {
           "type": "boolean",
           "scope": "resource",
           "default": true,
           "description": "Use staged changes when any are present; otherwise use unstaged changes."
         },
-        "opencommit.maxDiffChars": {
+        "gitCommitPlanner.maxDiffChars": {
           "type": "number",
           "scope": "resource",
           "default": 0,
           "minimum": 0,
           "maximum": 2000000,
-          "markdownDescription": "Optional character cap for diff content. Set to `0` to use token budgeting from `opencommit.modelContextTokens` and `opencommit.maxPromptContextRatio`."
+          "markdownDescription": "Optional character cap for diff content. Set to `0` to use token budgeting from `gitCommitPlanner.modelContextTokens` and `gitCommitPlanner.maxPromptContextRatio`."
         },
-        "opencommit.modelContextTokens": {
+        "gitCommitPlanner.modelContextTokens": {
           "type": "number",
           "scope": "resource",
           "default": 200000,
@@ -311,7 +316,7 @@
           "maximum": 2000000,
           "description": "Assumed model context window in tokens. Used for local prompt budgeting; OpenRouter metadata is not fetched automatically."
         },
-        "opencommit.maxPromptContextRatio": {
+        "gitCommitPlanner.maxPromptContextRatio": {
           "type": "number",
           "scope": "resource",
           "default": 0.6,
@@ -319,21 +324,21 @@
           "maximum": 0.95,
           "description": "Maximum fraction of the configured model context window used for the prompt."
         },
-        "opencommit.maxPromptTokens": {
+        "gitCommitPlanner.maxPromptTokens": {
           "type": "number",
           "scope": "resource",
           "default": 0,
           "minimum": 0,
           "maximum": 2000000,
-          "markdownDescription": "Optional direct prompt token budget. Set to `0` to calculate it from `opencommit.modelContextTokens * opencommit.maxPromptContextRatio`."
+          "markdownDescription": "Optional direct prompt token budget. Set to `0` to calculate it from `gitCommitPlanner.modelContextTokens * gitCommitPlanner.maxPromptContextRatio`."
         },
-        "opencommit.language": {
+        "gitCommitPlanner.language": {
           "type": "string",
           "scope": "resource",
           "default": "en",
           "description": "Language for the generated commit message."
         },
-        "opencommit.temperature": {
+        "gitCommitPlanner.temperature": {
           "type": "number",
           "scope": "resource",
           "default": 0.2,
@@ -341,7 +346,7 @@
           "maximum": 2,
           "description": "Sampling temperature for the provider request."
         },
-        "opencommit.maxOutputTokens": {
+        "gitCommitPlanner.maxOutputTokens": {
           "type": "number",
           "scope": "resource",
           "default": 800,
@@ -349,7 +354,7 @@
           "maximum": 128000,
           "description": "Maximum output tokens for the generated commit message."
         },
-        "opencommit.maxPlanOutputTokens": {
+        "gitCommitPlanner.maxPlanOutputTokens": {
           "type": "number",
           "scope": "resource",
           "default": 32000,
@@ -357,11 +362,11 @@
           "maximum": 128000,
           "description": "Maximum output tokens for Commit Planner JSON. Large plans need room for every planned commit and file path."
         },
-        "opencommit.debugLogging": {
+        "gitCommitPlanner.debugLogging": {
           "type": "boolean",
           "scope": "resource",
           "default": false,
-          "description": "Write detailed prompts, diffs, redacted request metadata, raw provider responses, and final commit message cleanup details to the OpenCommit output channel."
+          "description": "Write detailed prompts, diffs, redacted request metadata, raw provider responses, and final commit message cleanup details to the Git Commit Planner output channel."
         }
       }
     }

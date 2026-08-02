@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.0.0
+
+- Rename the extension to Git Commit Planner for Marketplace availability.
+- Rename commands, settings, views, secret keys, MIME types, context values, and diagnostics to the `gitCommitPlanner` namespace.
+- Add Marketplace search terms for AI Git commit messages, commit message generation, Conventional Commits, and commit planning.
+
 ## 1.1.6
 
 - Improve single commit message cleanup for structured and labeled model responses.
@@ -14,7 +20,7 @@
 ## 1.1.4
 
 - Raise the configurable output-token ceiling to `128000`.
-- Add `opencommit.maxPlanOutputTokens` so Commit Planner can request much larger JSON plans without increasing the default token budget for single commit messages.
+- Add `gitCommitPlanner.maxPlanOutputTokens` so Commit Planner can request much larger JSON plans without increasing the default token budget for single commit messages.
 
 ## 1.1.3
 
@@ -27,7 +33,7 @@
 
 ## 1.1.1
 
-- Read resource-scoped OpenCommit settings using the selected repository URI so folder-level model settings are respected.
+- Read resource-scoped Git Commit Planner settings using the selected repository URI so folder-level model settings are respected.
 
 ## 1.1.0
 
@@ -37,14 +43,14 @@
 
 ## 1.0.2
 
-- Rename the public settings namespace to `opencommit`.
-- Update README and Marketplace text to use OpenCommit and Conventional Commits wording.
+- Rename the public settings namespace to `gitCommitPlanner`.
+- Update README and Marketplace text to use Git Commit Planner and Conventional Commits wording.
 - Add a local release skill for future release automation.
 
 ## 1.0.1
 
 - Generate Conventional Commits messages by default.
-- Attach the Conventional Commits 1.0.0 specification to the model prompt for `opencommit.format: conventional`.
+- Attach the Conventional Commits 1.0.0 specification to the model prompt for `gitCommitPlanner.format: conventional`.
 - Keep simple and custom formats available for workspace override.
 
 ## 1.0.0

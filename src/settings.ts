@@ -27,7 +27,7 @@ export interface ExtensionSettings {
 }
 
 export function getSettings(resource?: vscode.Uri): ExtensionSettings {
-  const config = vscode.workspace.getConfiguration('opencommit', resource);
+  const config = vscode.workspace.getConfiguration('gitCommitPlanner', resource);
 
   return {
     provider: config.get<'openrouter'>('provider', 'openrouter'),
@@ -35,7 +35,7 @@ export function getSettings(resource?: vscode.Uri): ExtensionSettings {
       baseUrl: config.get<string>('openRouter.baseUrl', 'https://openrouter.ai/api/v1'),
       model: config.get<string>('openRouter.model', 'openrouter/auto'),
       siteUrl: config.get<string>('openRouter.siteUrl', ''),
-      appTitle: config.get<string>('openRouter.appTitle', 'OpenCommit VS Code Extension')
+      appTitle: config.get<string>('openRouter.appTitle', 'Git Commit Planner VS Code Extension')
     },
     format: config.get<CommitFormat>('format', 'conventional'),
     includeBody: config.get<IncludeBody>('includeBody', 'auto'),

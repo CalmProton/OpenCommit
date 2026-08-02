@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "ai-commit-msg",
+      "name": "git-commit-planner",
       "devDependencies": {
         "@types/node": "^22.0.0",
         "@types/vscode": "^1.95.0",

@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-const OPENROUTER_API_KEY = 'opencommit.openRouter.apiKey';
+const OPENROUTER_API_KEY = 'gitCommitPlanner.openRouter.apiKey';
 
 export async function getOpenRouterApiKey(secrets: vscode.SecretStorage): Promise<string | undefined> {
   return secrets.get(OPENROUTER_API_KEY);

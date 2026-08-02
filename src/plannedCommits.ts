@@ -25,8 +25,8 @@ import {
 } from './prompt';
 import { ExtensionSettings, getSettings } from './settings';
 
-const TREE_ID = 'opencommit.plannedCommits';
-const FILE_TRANSFER_MIME = 'application/vnd.opencommit.planned-commit-files';
+const TREE_ID = 'gitCommitPlanner.plannedCommits';
+const FILE_TRANSFER_MIME = 'application/vnd.git-commit-planner.planned-commit-files';
 const PLAN_REPAIR_ATTEMPTS = 2;
 
 interface PlannedCommitGroup {
@@ -72,14 +72,14 @@ export function registerPlannedCommits(
 
   context.subscriptions.push(
     controller,
-    vscode.commands.registerCommand('opencommit.planCommits', () => controller.planCommits()),
-    vscode.commands.registerCommand('opencommit.commitPlannedCommits', () => controller.commitPlannedCommits()),
-    vscode.commands.registerCommand('opencommit.regeneratePlan', () => controller.regeneratePlan()),
-    vscode.commands.registerCommand('opencommit.editPlannedCommitMessage', (item?: PlanItem) => controller.editCommitMessage(item)),
-    vscode.commands.registerCommand('opencommit.regeneratePlannedCommitMessage', (item?: PlanItem) => controller.regenerateCommitMessage(item)),
-    vscode.commands.registerCommand('opencommit.movePlannedCommitFile', (item?: PlanItem) => controller.moveFile(item)),
-    vscode.commands.registerCommand('opencommit.addPlannedCommit', () => controller.addCommit()),
-    vscode.commands.registerCommand('opencommit.removePlannedCommit', (item?: PlanItem) => controller.removeCommit(item))
+    vscode.commands.registerCommand('gitCommitPlanner.planCommits', () => controller.planCommits()),
+    vscode.commands.registerCommand('gitCommitPlanner.commitPlannedCommits', () => controller.commitPlannedCommits()),
+    vscode.commands.registerCommand('gitCommitPlanner.regeneratePlan', () => controller.regeneratePlan()),
+    vscode.commands.registerCommand('gitCommitPlanner.editPlannedCommitMessage', (item?: PlanItem) => controller.editCommitMessage(item)),
+    vscode.commands.registerCommand('gitCommitPlanner.regeneratePlannedCommitMessage', (item?: PlanItem) => controller.regenerateCommitMessage(item)),
+    vscode.commands.registerCommand('gitCommitPlanner.movePlannedCommitFile', (item?: PlanItem) => controller.moveFile(item)),
+    vscode.commands.registerCommand('gitCommitPlanner.addPlannedCommit', () => controller.addCommit()),
+    vscode.commands.registerCommand('gitCommitPlanner.removePlannedCommit', (item?: PlanItem) => controller.removeCommit(item))
   );
 }
 
@@ -344,7 +344,7 @@ class PlannedCommitsController implements
             throw new Error('Working tree changed after the plan was generated. Regenerate the plan before committing.');
           }
 
-          const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'opencommit-'));
+          const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'git-commit-planner-'));
 
           try {
             this.suppressPlanSync = true;
@@ -800,7 +800,7 @@ class PlannedCommitsController implements
 
       const message = error instanceof Error ? error.message : String(error);
       logger.error(error);
-      vscode.window.showErrorMessage(`OpenCommit: ${message}`);
+      vscode.window.showErrorMessage(`Git Commit Planner: ${message}`);
     }
   }
 }
@@ -810,7 +810,7 @@ class CommitTreeItem extends vscode.TreeItem {
     super(firstLine(commit.message), vscode.TreeItemCollapsibleState.Expanded);
 
     this.groupId = commit.id;
-    this.contextValue = 'opencommit.commit';
+    this.contextValue = 'gitCommitPlanner.commit';
     this.description = [
       `${commit.files.length} file${commit.files.length === 1 ? '' : 's'}`,
       commit.messageStale ? 'message needs regeneration' : ''
@@ -831,7 +831,7 @@ class FileTreeItem extends vscode.TreeItem {
   ) {
     super(path.basename(filePath), vscode.TreeItemCollapsibleState.None);
 
-    this.contextValue = 'opencommit.file';
+    this.contextValue = 'gitCommitPlanner.file';
     this.description = path.dirname(filePath) === '.' ? statusLabel(status) : `${path.dirname(filePath)} - ${statusLabel(status)}`;
     this.tooltip = `${filePath}\n${statusLabel(status)}`;
     this.iconPath = new vscode.ThemeIcon(iconForStatus(status));

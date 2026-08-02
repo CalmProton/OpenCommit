@@ -1,11 +1,11 @@
 ---
 name: release
-description: Release the OpenCommit VS Code extension from this repository. Use when the user asks to publish, release, tag, package, or create a GitHub release for a new OpenCommit version.
+description: Release the Git Commit Planner VS Code extension from this repository. Use when the user asks to publish, release, tag, package, or create a GitHub release for a new Git Commit Planner version.
 ---
 
-# OpenCommit Release
+# Git Commit Planner Release
 
-Use this workflow for releases of `CalmProton/OpenCommit` from this repo.
+Use this workflow for releases of `CalmProton/git-commit-planner` from this repo.
 
 ## Workflow
 
@@ -14,13 +14,13 @@ Use this workflow for releases of `CalmProton/OpenCommit` from this repo.
 3. Update `package.json` `"version"` to the requested version.
 4. Move relevant `CHANGELOG.md` `Unreleased` notes into `## <version>`. If there is no `Unreleased` section, add a version section with the visible changes.
 5. Run `bun run compile`.
-6. Run `bun run package` and confirm it creates `opencommit-<version>.vsix`.
+6. Run `bun run package` and confirm it creates `git-commit-planner-<version>.vsix`.
 7. Stage the intended release files and commit with `chore: release v<version>`.
 8. Push the commit to `origin/main` when the user asked to publish a release.
 9. Create the GitHub release with:
 
 ```powershell
-gh release create v<version> opencommit-<version>.vsix --target HEAD --title "OpenCommit v<version>" --notes "<changelog notes>"
+gh release create v<version> git-commit-planner-<version>.vsix --target HEAD --title "Git Commit Planner v<version>" --notes "<changelog notes>"
 ```
 
 10. Verify with:
