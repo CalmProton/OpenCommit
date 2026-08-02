@@ -14,6 +14,10 @@ export interface PlanPromptInput extends PromptInput {
   allFiles: Array<{ path: string; status: string }>;
 }
 
+export interface CommitMessageRepairPromptInput extends PromptInput {
+  invalidResponse: string;
+}
+
 export interface PlanRepairPromptInput {
   allFiles: readonly { path: string; status: string }[];
   invalidPlanText: string;
@@ -46,6 +50,8 @@ export function buildMessages(input: PromptInput): Array<{ role: 'system' | 'use
         'Treat file status and operation metadata as authoritative.',
         'Never describe a deleted file as added, introduced, or created.',
         'Never infer hidden runtime behavior, bugs, features, validation, APIs, or user intent that is not visible in the diff.',
+        'Put the complete commit message, including any body, inside the commitMessage string.',
+        'Do not add a separate Subject:, Body:, or explanatory line outside the JSON object.',
         'Return only valid compact JSON matching this schema: {"commitMessage":"string"}.',
         'Do not return Markdown, comments, alternative messages, or explanatory text.'
       ].filter(Boolean).join('\n')
@@ -53,6 +59,69 @@ export function buildMessages(input: PromptInput): Array<{ role: 'system' | 'use
     {
       role: 'user',
       content: request
+    }
+  ];
+}
+
+export function buildCommitMessageRepairMessages(
+  input: CommitMessageRepairPromptInput
+): Array<{ role: 'system' | 'user'; content: string }> {
+  const settings = input.settings;
+
+  return [
+    {
+      role: 'system',
+      content: [
+        'You repair invalid Git commit message responses.',
+        'Use only the data inside <diff> and <changed_files_json> as evidence.',
+        'Treat file status and operation metadata as authoritative.',
+        'Never describe a deleted file as added, introduced, or created.',
+        'Return only valid compact JSON matching this schema: {"commitMessage":"string"}.',
+        'Put the complete commit message, including any body, inside the commitMessage string.',
+        'Do not return Markdown, comments, alternative messages, or explanatory text.'
+      ].join('\n')
+    },
+    {
+      role: 'user',
+      content: [
+        '<commit_message_repair_request>',
+        '  <task>Return one corrected commit message. Replace the invalid response completely.</task>',
+        '  <repair_rules>',
+        '    <output>Return exactly one JSON object with a string commitMessage property.</output>',
+        '    <body>Put any body text inside the commitMessage string. Do not write Subject: or Body: outside the JSON object.</body>',
+        '    <evidence>Use only the visible diff and changed file metadata. Do not repeat or trust claims from the invalid response.</evidence>',
+        '  </repair_rules>',
+        '  <style_rules>',
+        `    <language>${escapeXml(settings.language)}</language>`,
+        '    <imperative_mood>true</imperative_mood>',
+        '    <subject_max_columns>72</subject_max_columns>',
+        `    <body_policy>${escapeXml(getBodyRule(settings.includeBody))}</body_policy>`,
+        `    <format_policy>${escapeXml(getFormatRules(settings))}</format_policy>`,
+        getFormatSpec(settings),
+        `    <change_type_policy>${escapeXml(getChangeTypePolicy(settings))}</change_type_policy>`,
+        settings.customInstructions.trim()
+          ? `    <custom_instructions>${escapeXml(settings.customInstructions.trim())}</custom_instructions>`
+          : '',
+        '  </style_rules>',
+        '  <output_contract>',
+        '    <json_schema>{"commitMessage":"string"}</json_schema>',
+        '    <notes>Return only this JSON object. Do not add text after it.</notes>',
+        '  </output_contract>',
+        '  <change_context>',
+        `    <source>${escapeXml(input.source)}</source>`,
+        `    <diff_truncated>${input.truncated ? 'true' : 'false'}</diff_truncated>`,
+        `    <changed_files_json>${escapeXml(JSON.stringify(input.files))}</changed_files_json>`,
+        `    <changed_file_operations_json>${escapeXml(JSON.stringify(describeFileOperations(input.files)))}</changed_file_operations_json>`,
+        `    <budget_json>${escapeXml(JSON.stringify(input.budget))}</budget_json>`,
+        '  </change_context>',
+        '  <invalid_response><![CDATA[',
+        escapeCdata(input.invalidResponse),
+        '  ]]></invalid_response>',
+        '  <diff><![CDATA[',
+        escapeCdata(input.diff),
+        '  ]]></diff>',
+        '</commit_message_repair_request>'
+      ].filter(Boolean).join('\n')
     }
   ];
 }
@@ -69,6 +138,8 @@ export function buildPlanMessages(input: PlanPromptInput): Array<{ role: 'system
         'Use only the data inside <diff> and <changed_files_json> as evidence.',
         'Treat file status and operation metadata as authoritative.',
         'Never describe a deleted file as added, introduced, or created.',
+        'Put the complete commit message, including any body, inside each message string.',
+        'Do not add explanatory text outside the JSON object.',
         'Every changed file must appear exactly once in the output.',
         'Never include files not present in changed_files_json.',
         'Return only valid compact JSON matching this schema: {"commits":[{"message":"string","files":["string"]}]}.',
@@ -102,7 +173,7 @@ export function buildPlanMessages(input: PlanPromptInput): Array<{ role: 'system
         '  </message_style_rules>',
         '  <output_contract>',
         '    <json_schema>{"commits":[{"message":"string","files":["string"]}]}</json_schema>',
-        '    <notes>Return only this JSON object. File paths must exactly match changed_files_json paths.</notes>',
+        '    <notes>Return only this JSON object. Put each complete commit message, including any body, in its message string. File paths must exactly match changed_files_json paths.</notes>',
         '  </output_contract>',
         '  <change_context>',
         `    <source>${escapeXml(input.source)}</source>`,
@@ -179,7 +250,7 @@ export function buildPlanRepairMessages(input: PlanRepairPromptInput): Array<{ r
         '  ]]></raw_invalid_plan>',
         '  <output_contract>',
         '    <json_schema>{"commits":[{"message":"string","files":["string"]}]}</json_schema>',
-        '    <notes>Return only this complete JSON object. File paths must exactly match changed_files_json paths.</notes>',
+        '    <notes>Return only this complete JSON object. Put each complete commit message, including any body, in its message string. File paths must exactly match changed_files_json paths.</notes>',
         '  </output_contract>',
         '</commit_plan_repair_request>'
       ].filter(Boolean).join('\n')
@@ -199,6 +270,8 @@ export function buildPlannedCommitMessageMessages(input: PlannedCommitPromptInpu
         'Use only the selected files and visible diff evidence.',
         'Treat file status and operation metadata as authoritative.',
         'Never describe a deleted file as added, introduced, or created.',
+        'Put the complete commit message, including any body, inside the commitMessage string.',
+        'Do not add a separate Subject:, Body:, or explanatory line outside the JSON object.',
         'Return only valid compact JSON matching this schema: {"commitMessage":"string"}.',
         'Do not return Markdown, comments, alternative messages, or explanatory text.'
       ].join('\n')
@@ -224,7 +297,7 @@ export function buildPlannedCommitMessageMessages(input: PlannedCommitPromptInpu
         '  </style_rules>',
         '  <output_contract>',
         '    <json_schema>{"commitMessage":"string"}</json_schema>',
-        '    <notes>Return only this JSON object. The commitMessage value may contain newline characters if a body is required.</notes>',
+        '    <notes>Return only this JSON object. Put the complete commit message, including any body, in the commitMessage string. Do not add text after the JSON object.</notes>',
         '  </output_contract>',
         '  <change_context>',
         `    <source>${escapeXml(input.source)}</source>`,
@@ -244,8 +317,18 @@ export function buildPlannedCommitMessageMessages(input: PlannedCommitPromptInpu
   ];
 }
 
+export function parseCommitMessage(raw: string): string | undefined {
+  const value = extractMessageFromJson(raw) ?? extractLabeledCommitMessage(raw);
+
+  return value?.trim() ? cleanCommitMessage(value) : undefined;
+}
+
 export function sanitizeCommitMessage(raw: string): string {
-  let value = extractMessageFromJson(raw) ?? raw.trim();
+  return cleanCommitMessage(parseCommitMessage(raw) ?? raw.trim());
+}
+
+function cleanCommitMessage(raw: string): string {
+  let value = raw;
 
   value = value.replace(/^```(?:text|gitcommit|markdown)?\s*/i, '');
   value = value.replace(/^```json\s*/i, '');
@@ -260,7 +343,7 @@ export function sanitizeCommitMessage(raw: string): string {
 }
 
 export function parsePlannedCommits(raw: string): Array<{ message: string; files: string[] }> | undefined {
-  const parsed = extractJsonObject(raw);
+  const parsed = extractJsonObject(raw, value => Array.isArray(value.commits));
 
   if (!parsed) {
     return undefined;
@@ -314,7 +397,7 @@ function buildStructuredRequest(
     '  </style_rules>',
     '  <output_contract>',
     '    <json_schema>{"commitMessage":"string"}</json_schema>',
-    '    <notes>Return only this JSON object. The commitMessage value may contain newline characters if a body is required.</notes>',
+    '    <notes>Return only this JSON object. Put the complete commit message, including any body, in the commitMessage string. Do not add text after the JSON object.</notes>',
     '  </output_contract>',
     '  <change_context>',
     `    <source>${escapeXml(input.source)}</source>`,
@@ -405,35 +488,57 @@ function getExamples(settings: ExtensionSettings): string {
 }
 
 function extractMessageFromJson(raw: string): string | undefined {
-  const parsed = extractJsonObject(raw) as { commitMessage?: unknown; message?: unknown; subject?: unknown; body?: unknown } | undefined;
+  for (const candidate of extractJsonObjectCandidates(raw)) {
+    const message = getMessageFromJson(candidate.value);
 
-  if (!parsed) {
-    return undefined;
+    if (message?.trim()) {
+      return appendBody(message, extractBodyAfterJson(candidate.source, candidate.end));
+    }
   }
 
+  return extractLooseCommitMessage(raw);
+}
+
+function getMessageFromJson(parsed: Record<string, unknown>): string | undefined {
   if (typeof parsed.commitMessage === 'string') {
-    return parsed.commitMessage;
+    return appendBody(parsed.commitMessage, parsed.body);
+  }
+
+  if (typeof parsed.commit_message === 'string') {
+    return appendBody(parsed.commit_message, parsed.body);
   }
 
   if (typeof parsed.message === 'string') {
-    return parsed.message;
+    return appendBody(parsed.message, parsed.body);
   }
 
   if (typeof parsed.subject === 'string') {
-    return typeof parsed.body === 'string' && parsed.body.trim()
-      ? `${parsed.subject.trim()}\n\n${parsed.body.trim()}`
-      : parsed.subject;
+    return appendBody(parsed.subject, parsed.body);
   }
 
   return undefined;
 }
 
-function extractJsonObject(raw: string): Record<string, unknown> | undefined {
-  const value = raw.trim().replace(/^```json\s*/i, '').replace(/\s*```$/i, '');
+interface JsonObjectCandidate {
+  value: Record<string, unknown>;
+  source: string;
+  end: number;
+}
+
+function extractJsonObject(
+  raw: string,
+  predicate?: (value: Record<string, unknown>) => boolean
+): Record<string, unknown> | undefined {
+  return extractJsonObjectCandidates(raw).find(candidate => !predicate || predicate(candidate.value))?.value;
+}
+
+function extractJsonObjectCandidates(raw: string): JsonObjectCandidate[] {
+  const value = normalizeGeneratedOutput(raw);
+  const candidates: JsonObjectCandidate[] = [];
   const direct = parseJsonObject(value);
 
   if (direct) {
-    return direct;
+    candidates.push({ value: direct, source: value, end: value.length });
   }
 
   let start = value.indexOf('{');
@@ -442,14 +547,137 @@ function extractJsonObject(raw: string): Record<string, unknown> | undefined {
     const candidate = extractBalancedJsonObject(value, start);
     const parsed = candidate ? parseJsonObject(candidate) : undefined;
 
-    if (parsed) {
-      return parsed;
+    if (candidate && parsed) {
+      candidates.push({
+        value: parsed,
+        source: value,
+        end: start + candidate.length
+      });
     }
 
     start = value.indexOf('{', start + 1);
   }
 
+  return candidates;
+}
+
+function normalizeGeneratedOutput(raw: string): string {
+  return raw
+    .trim()
+    .replace(/^\uFEFF/, '')
+    .replace(/^```(?:json|text|gitcommit|markdown)?\s*/i, '')
+    .replace(/\s*```$/i, '')
+    .trim();
+}
+
+function extractBodyAfterJson(source: string, end: number): string | undefined {
+  const trailing = source
+    .slice(end)
+    .trim()
+    .replace(/^```(?:text|gitcommit|markdown)?\s*/i, '')
+    .replace(/^```json\s*/i, '')
+    .replace(/\s*```$/i, '')
+    .replace(/^[,}\]]+\s*/, '')
+    .trim();
+  const match = trailing.match(/^(?:\*{0,2})Body(?:\*{0,2})\s*:\s*([\s\S]*)$/i);
+
+  return match?.[1].trim() || undefined;
+}
+
+function extractLooseCommitMessage(raw: string): string | undefined {
+  const source = normalizeGeneratedOutput(raw);
+  const keyPattern = /["']?(?:commitMessage|commit_message)["']?\s*:/gi;
+  let match: RegExpExecArray | null;
+
+  while ((match = keyPattern.exec(source))) {
+    let start = match.index + match[0].length;
+
+    while (/\s/.test(source[start] ?? '')) {
+      start += 1;
+    }
+
+    const quote = source[start];
+    if (quote !== '"' && quote !== "'") {
+      continue;
+    }
+
+    const parsed = readQuotedValue(source, start, quote);
+    if (parsed?.value.trim()) {
+      return appendBody(parsed.value, extractBodyAfterJson(source, parsed.end));
+    }
+  }
+
   return undefined;
+}
+
+function readQuotedValue(source: string, start: number, quote: string): { value: string; end: number } | undefined {
+  let escaped = false;
+
+  for (let index = start + 1; index < source.length; index += 1) {
+    const char = source[index];
+
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+
+    if (char === '\\') {
+      escaped = true;
+      continue;
+    }
+
+    if (char !== quote) {
+      continue;
+    }
+
+    const encoded = source.slice(start, index + 1);
+
+    if (quote === '"') {
+      try {
+        const value: unknown = JSON.parse(encoded);
+        if (typeof value === 'string') {
+          return { value, end: index + 1 };
+        }
+      } catch {
+        // Fall through to the tolerant string cleanup below.
+      }
+    }
+
+    return {
+      value: source
+        .slice(start + 1, index)
+        .replace(/\\n/g, '\n')
+        .replace(/\\r/g, '\r')
+        .replace(/\\t/g, '\t')
+        .replace(/\\(["'])/g, '$1'),
+      end: index + 1
+    };
+  }
+
+  return undefined;
+}
+
+function extractLabeledCommitMessage(raw: string): string | undefined {
+  const source = normalizeGeneratedOutput(raw);
+  const subject = source.match(/^\s*(?:\*{0,2})Subject(?:\*{0,2})\s*:\s*([^\r\n]*)/i);
+
+  if (!subject?.[1].trim()) {
+    return undefined;
+  }
+
+  const body = source.match(/(?:^|\r?\n)\s*(?:\*{0,2})Body(?:\*{0,2})\s*:\s*([\s\S]*)$/i);
+  return appendBody(subject[1], body?.[1]);
+}
+
+function appendBody(message: string, body: unknown): string {
+  const cleanMessage = message.trim();
+  const cleanBody = typeof body === 'string' ? body.trim() : '';
+
+  if (!cleanBody || cleanMessage.includes(cleanBody)) {
+    return cleanMessage;
+  }
+
+  return `${cleanMessage}\n\n${cleanBody}`;
 }
 
 function parseJsonObject(value: string): Record<string, unknown> | undefined {

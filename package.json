@@ -2,7 +2,7 @@
   "name": "opencommit",
   "displayName": "OpenCommit",
   "description": "Free Conventional Commits generator for VS Code, powered by OpenRouter.",
-  "version": "1.1.5",
+  "version": "1.1.6",
   "publisher": "MadElectron",
   "license": "MIT",
   "repository": {
@@ -117,6 +117,11 @@
           "command": "opencommit.generate",
           "when": "scmProvider == git",
           "group": "navigation@9"
+        },
+        {
+          "command": "opencommit.planCommits",
+          "when": "scmProvider == git",
+          "group": "navigation@10"
         }
       ],
       "scm/repository": [
@@ -124,6 +129,11 @@
           "command": "opencommit.generate",
           "when": "scmProvider == git",
           "group": "inline@9"
+        },
+        {
+          "command": "opencommit.planCommits",
+          "when": "scmProvider == git",
+          "group": "inline@10"
         }
       ],
       "view/title": [

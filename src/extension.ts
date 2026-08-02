@@ -3,11 +3,12 @@ import { buildDiffContext, getGitApi, pickRepository } from './git';
 import { createLogger } from './logger';
 import { createOpenRouterCommitMessage, OpenRouterResponseError } from './openrouter';
 import { registerPlannedCommits } from './plannedCommits';
-import { buildMessages, sanitizeCommitMessage } from './prompt';
+import { buildCommitMessageRepairMessages, buildMessages, parseCommitMessage } from './prompt';
 import { clearOpenRouterApiKey, getOpenRouterApiKey, promptForOpenRouterApiKey } from './secrets';
 import { getSettings } from './settings';
 
 let output: vscode.OutputChannel;
+const COMMIT_MESSAGE_REPAIR_ATTEMPTS = 2;
 
 export function activate(context: vscode.ExtensionContext): void {
   output = vscode.window.createOutputChannel('OpenCommit');
@@ -56,14 +57,15 @@ async function generateCommitMessage(context: vscode.ExtensionContext): Promise<
         try {
           const logger = createLogger(output);
           const diffContext = await buildDiffContext(repository, settings);
-          const messages = buildMessages({
+          const promptInput = {
             diff: diffContext.diff,
             source: diffContext.source,
             files: diffContext.files,
             budget: diffContext.budget,
             truncated: diffContext.truncated,
             settings
-          });
+          };
+          const messages = buildMessages(promptInput);
 
           logger.section('Generation started');
           logger.line(`Extension version: ${context.extension.packageJSON.version}`);
@@ -121,7 +123,7 @@ async function generateCommitMessage(context: vscode.ExtensionContext): Promise<
             logger.line('Enable opencommit.debugLogging for full diff, prompt, request, and response diagnostics.');
           }
 
-          const result = await createOpenRouterCommitMessage(apiKey, messages, settings, abortController.signal);
+          let result = await createOpenRouterCommitMessage(apiKey, messages, settings, abortController.signal);
 
           if (settings.debugLogging) {
             logger.json('OpenRouter request', result.request);
@@ -132,11 +134,39 @@ async function generateCommitMessage(context: vscode.ExtensionContext): Promise<
             logger.json('OpenRouter response summary', result.response.choiceSummary);
           }
 
-          const message = sanitizeCommitMessage(result.text);
-          logger.text('Commit message after cleanup', message);
+          let message = parseCommitMessage(result.text);
+          logger.text('Commit message after cleanup', message ?? '[unparseable response]');
 
-          if (!message.trim()) {
-            throw new Error('Generated commit message was empty after cleanup.');
+          for (let attempt = 1; !message?.trim() && attempt <= COMMIT_MESSAGE_REPAIR_ATTEMPTS; attempt += 1) {
+            logger.section(`Commit message parse repair attempt ${attempt}`);
+            logger.line(`The model response was not parseable. Requesting a corrected response (${attempt}/${COMMIT_MESSAGE_REPAIR_ATTEMPTS}).`);
+
+            const repairMessages = buildCommitMessageRepairMessages({
+              ...promptInput,
+              invalidResponse: result.text
+            });
+
+            if (settings.debugLogging) {
+              logger.json('Repair messages sent to OpenRouter', repairMessages);
+            }
+
+            result = await createOpenRouterCommitMessage(apiKey, repairMessages, settings, abortController.signal);
+
+            if (settings.debugLogging) {
+              logger.json('OpenRouter repair request', result.request);
+              logger.json('OpenRouter repair response summary', result.response.choiceSummary);
+              logger.text('OpenRouter repair raw response body', result.response.bodyText);
+              logger.text('Extracted repair model text', result.text);
+            } else {
+              logger.json('OpenRouter repair response summary', result.response.choiceSummary);
+            }
+
+            message = parseCommitMessage(result.text);
+            logger.text(`Commit message after repair ${attempt}`, message ?? '[unparseable response]');
+          }
+
+          if (!message?.trim()) {
+            throw new Error(`OpenRouter did not return a parseable commit message after ${COMMIT_MESSAGE_REPAIR_ATTEMPTS} repair attempts.`);
           }
 
           repository.inputBox.value = message;

@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.6
+
+- Improve single commit message cleanup for structured and labeled model responses.
+- Retry unparseable single commit responses up to two times with a repair prompt.
+- Add the Plan Commits shortcut beside Generate in the Source Control menus.
+
 ## 1.1.5
 
 - Repair invalid Commit Planner JSON by asking the model to correct missing, duplicate, or unknown files before falling back to a local completion pass.
