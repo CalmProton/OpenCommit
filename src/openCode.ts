@@ -199,6 +199,9 @@ export class OpenCodeClient {
 
     const response = await this.requestWithLog(request, signal);
     if (response.status >= 200 && response.status < 300) {
+      if (hasUnsupportedThinkingToolChoiceError(response) && 'format' in body) {
+        return this.retryWithoutFormat(request, body, signal);
+      }
       return { payload: response.payload, request, response };
     }
 
@@ -207,6 +210,14 @@ export class OpenCodeClient {
       throw error;
     }
 
+    return this.retryWithoutFormat(request, body, signal);
+  }
+
+  private async retryWithoutFormat(
+    request: OpenCodeRequestLog,
+    body: Record<string, unknown>,
+    signal?: AbortSignal
+  ): Promise<{ payload: unknown; request: OpenCodeRequestLog; response: OpenCodeResponseLog }> {
     const fallbackBody = { ...body };
     delete fallbackBody.format;
     const fallbackRequest = this.createRequest(request.method, request.url, undefined, fallbackBody);
@@ -720,6 +731,11 @@ function hasUnsupportedFormatError(error: unknown): boolean {
 
   const message = `${error.message} ${error.response.bodyText}`.toLowerCase();
   return message.includes('format') || message.includes('unknown key') || message.includes('unrecognized');
+}
+
+function hasUnsupportedThinkingToolChoiceError(response: OpenCodeResponseLog): boolean {
+  const message = `${extractAssistantError(response.payload) ?? ''} ${response.bodyText}`.toLowerCase();
+  return message.includes('thinking mode') && message.includes('tool_choice');
 }
 
 async function waitForHealth(

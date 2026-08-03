@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.2.1
+
+- Retry OpenCode requests without structured output when a thinking model rejects the required tool choice.
+
 ## 2.2.0
 
 - Rewrite the README and setting descriptions with ASD-STE100 writing principles.

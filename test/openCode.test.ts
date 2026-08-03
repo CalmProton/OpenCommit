@@ -127,4 +127,74 @@ describe('OpenCode helpers', () => {
       server.stop();
     }
   });
+
+  test('retries without structured output when thinking mode rejects tool choice', async () => {
+    const messageBodies: Array<Record<string, unknown>> = [];
+    const server = Bun.serve({
+      port: 0,
+      async fetch(request) {
+        const url = new URL(request.url);
+        if (url.pathname === '/global/health') {
+          return Response.json({ healthy: true });
+        }
+        if (url.pathname === '/session' && request.method === 'POST') {
+          return Response.json({ id: 'session-1' });
+        }
+        if (url.pathname === '/session/session-1/message' && request.method === 'POST') {
+          const body = await request.json() as Record<string, unknown>;
+          messageBodies.push(body);
+          if ('format' in body) {
+            return Response.json({
+              info: {
+                error: {
+                  name: 'APIError',
+                  data: { message: 'Error from provider: Thinking mode does not support this tool_choice' }
+                }
+              },
+              parts: []
+            });
+          }
+          return Response.json({
+            parts: [{ type: 'text', text: '{"commits":[]}' }]
+          });
+        }
+        if (url.pathname === '/session/session-1' && request.method === 'DELETE') {
+          return new Response(null, { status: 204 });
+        }
+        return Response.json({ error: 'not found' }, { status: 404 });
+      }
+    });
+
+    try {
+      const client = new OpenCodeClient('opencode', server.url.href);
+      const result = await client.generate(
+        [
+          { role: 'system', content: 'Return JSON.' },
+          { role: 'user', content: 'Describe the change.' }
+        ],
+        'C:/repo',
+        {
+          opencode: {
+            command: 'opencode',
+            serverUrl: server.url.href,
+            model: 'opencode-go/deepseek-v4-flash',
+            variant: 'high'
+          }
+        } as ExtensionSettings,
+        { type: 'object', properties: { commits: { type: 'array' } } }
+      );
+
+      expect(result.text).toBe('{"commits":[]}');
+      expect(messageBodies).toHaveLength(2);
+      expect(messageBodies[0]).toHaveProperty('format');
+      expect(messageBodies[1]).not.toHaveProperty('format');
+      expect(messageBodies[1]).toMatchObject({
+        model: { providerID: 'opencode-go', modelID: 'deepseek-v4-flash' },
+        variant: 'high'
+      });
+      client.dispose();
+    } finally {
+      server.stop();
+    }
+  });
 });
