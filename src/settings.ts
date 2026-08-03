@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 
 export type CommitFormat = 'conventional' | 'simple' | 'custom';
 export type IncludeBody = 'never' | 'auto' | 'always';
-export type Provider = 'openrouter' | 'codex';
+export type Provider = 'openrouter' | 'codex' | 'opencode';
 export type CodexReasoningEffort = string;
 
 export interface ExtensionSettings {
@@ -17,6 +17,12 @@ export interface ExtensionSettings {
     command: string;
     model: string;
     reasoningEffort: CodexReasoningEffort;
+  };
+  opencode: {
+    command: string;
+    serverUrl: string;
+    model: string;
+    variant: string;
   };
   format: CommitFormat;
   includeBody: IncludeBody;
@@ -48,6 +54,12 @@ export function getSettings(resource?: vscode.Uri): ExtensionSettings {
       command: config.get<string>('codex.command', 'codex'),
       model: config.get<string>('codex.model', ''),
       reasoningEffort: config.get<CodexReasoningEffort>('codex.reasoningEffort', '')
+    },
+    opencode: {
+      command: config.get<string>('opencode.command', 'opencode'),
+      serverUrl: config.get<string>('opencode.serverUrl', ''),
+      model: config.get<string>('opencode.model', ''),
+      variant: config.get<string>('opencode.variant', '')
     },
     format: config.get<CommitFormat>('format', 'conventional'),
     includeBody: config.get<IncludeBody>('includeBody', 'auto'),

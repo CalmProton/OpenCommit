@@ -16,6 +16,7 @@ import {
 } from './git';
 import { createLogger, Logger } from './logger';
 import { CodexResponseError } from './codexAppServer';
+import { OpenCodeResponseError } from './openCode';
 import { OpenRouterResponseError } from './openrouter';
 import {
   buildPlannedCommitMessageMessages,
@@ -199,7 +200,7 @@ class PlannedCommitsController implements
       }
 
       const settings = getSettings(repository.rootUri);
-      if (!(await this.provider.ensureAccess(settings))) {
+      if (!(await this.provider.ensureAccess(settings, repository.rootUri.fsPath))) {
         return;
       }
 
@@ -434,7 +435,7 @@ class PlannedCommitsController implements
       }
 
       const settings = getSettings(this.plan.repository.rootUri);
-      if (!(await this.provider.ensureAccess(settings))) {
+      if (!(await this.provider.ensureAccess(settings, this.plan.repository.rootUri.fsPath))) {
         return;
       }
 
@@ -802,7 +803,7 @@ class PlannedCommitsController implements
     } catch (error) {
       const logger = createLogger(this.output);
 
-      if (error instanceof OpenRouterResponseError || error instanceof CodexResponseError) {
+      if (error instanceof OpenRouterResponseError || error instanceof CodexResponseError || error instanceof OpenCodeResponseError) {
         logger.section('Provider failure diagnostics');
         logger.json('Provider request', error.request);
         logger.json('Provider response', error.response);
@@ -966,7 +967,7 @@ async function requestPlanRepair(input: {
 
     input.logger.error(error);
 
-    if (error instanceof OpenRouterResponseError || error instanceof CodexResponseError) {
+    if (error instanceof OpenRouterResponseError || error instanceof CodexResponseError || error instanceof OpenCodeResponseError) {
       input.logger.section('Provider repair failure diagnostics');
       input.logger.json('Provider repair request', error.request);
       input.logger.json('Provider repair response', error.response);
@@ -1188,9 +1189,17 @@ function firstLine(value: string): string {
 }
 
 function modelLabel(settings: ExtensionSettings): string {
-  return settings.provider === 'codex'
-    ? settings.codex.model.trim() || '(Codex default)'
-    : settings.openRouter.model;
+  if (settings.provider === 'codex') {
+    return settings.codex.model.trim() || '(Codex default)';
+  }
+
+  if (settings.provider === 'opencode') {
+    const model = settings.opencode.model.trim() || '(OpenCode default)';
+    const variant = settings.opencode.variant.trim();
+    return variant && !model.includes('#') ? `${model}#${variant}` : model;
+  }
+
+  return settings.openRouter.model;
 }
 
 function responseSummary(response: unknown): unknown {

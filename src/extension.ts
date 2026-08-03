@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { buildDiffContext, getGitApi, pickRepository } from './git';
 import { createLogger } from './logger';
 import { CodexResponseError } from './codexAppServer';
+import { OpenCodeResponseError } from './openCode';
 import { OpenRouterResponseError } from './openrouter';
 import { registerPlannedCommits } from './plannedCommits';
 import { ProviderService } from './provider';
@@ -28,7 +29,10 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('gitCommitPlanner.codexSignOut', () => runProviderCommand(() => providerService.signOut())),
     vscode.commands.registerCommand('gitCommitPlanner.codexStatus', () => runProviderCommand(() => providerService.showStatus())),
     vscode.commands.registerCommand('gitCommitPlanner.selectCodexModel', () => runProviderCommand(() => providerService.selectModel())),
-    vscode.commands.registerCommand('gitCommitPlanner.selectCodexReasoningEffort', () => runProviderCommand(() => providerService.selectReasoningEffort()))
+    vscode.commands.registerCommand('gitCommitPlanner.selectCodexReasoningEffort', () => runProviderCommand(() => providerService.selectReasoningEffort())),
+    vscode.commands.registerCommand('gitCommitPlanner.opencodeStatus', () => runProviderCommand(() => providerService.showOpenCodeStatus())),
+    vscode.commands.registerCommand('gitCommitPlanner.selectOpenCodeModel', () => runProviderCommand(() => providerService.selectOpenCodeModel())),
+    vscode.commands.registerCommand('gitCommitPlanner.selectOpenCodeVariant', () => runProviderCommand(() => providerService.selectOpenCodeVariant()))
   );
 
   registerPlannedCommits(context, output, providerService);
@@ -50,7 +54,7 @@ async function generateCommitMessage(context: vscode.ExtensionContext, providers
 
     const settings = getSettings(repository.rootUri);
 
-    if (!(await providers.ensureAccess(settings))) {
+    if (!(await providers.ensureAccess(settings, repository.rootUri.fsPath))) {
       return;
     }
 
@@ -99,9 +103,13 @@ async function generateCommitMessage(context: vscode.ExtensionContext, providers
             logger.json('Settings', {
               provider: settings.provider,
               model: modelLabel(settings),
-              ...(settings.provider === 'openrouter' ? { baseUrl: settings.openRouter.baseUrl } : {
+              ...(settings.provider === 'openrouter' ? { baseUrl: settings.openRouter.baseUrl } : settings.provider === 'codex' ? {
                 codexCommand: settings.codex.command,
                 reasoningEffort: settings.codex.reasoningEffort
+              } : {
+                openCodeCommand: settings.opencode.command,
+                openCodeServerUrl: settings.opencode.serverUrl,
+                openCodeVariant: settings.opencode.variant
               }),
               format: settings.format,
               includeBody: settings.includeBody,
@@ -201,7 +209,7 @@ async function generateCommitMessage(context: vscode.ExtensionContext, providers
     );
   } catch (error) {
     const logger = createLogger(output);
-    if (error instanceof OpenRouterResponseError || error instanceof CodexResponseError) {
+    if (error instanceof OpenRouterResponseError || error instanceof CodexResponseError || error instanceof OpenCodeResponseError) {
       logger.section('Provider failure diagnostics');
       logger.json('Provider request', error.request);
       logger.json('Provider response', error.response);
@@ -214,9 +222,17 @@ async function generateCommitMessage(context: vscode.ExtensionContext, providers
 }
 
 function modelLabel(settings: ReturnType<typeof getSettings>): string {
-  return settings.provider === 'codex'
-    ? settings.codex.model.trim() || '(Codex default)'
-    : settings.openRouter.model;
+  if (settings.provider === 'codex') {
+    return settings.codex.model.trim() || '(Codex default)';
+  }
+
+  if (settings.provider === 'opencode') {
+    const model = settings.opencode.model.trim() || '(OpenCode default)';
+    const variant = settings.opencode.variant.trim();
+    return variant && !model.includes('#') ? `${model}#${variant}` : model;
+  }
+
+  return settings.openRouter.model;
 }
 
 function responseSummary(response: unknown): unknown {
@@ -233,7 +249,7 @@ async function runProviderCommand(action: () => Promise<unknown>): Promise<void>
     await action();
   } catch (error) {
     const logger = createLogger(output);
-    if (error instanceof OpenRouterResponseError || error instanceof CodexResponseError) {
+    if (error instanceof OpenRouterResponseError || error instanceof CodexResponseError || error instanceof OpenCodeResponseError) {
       logger.section('Provider failure diagnostics');
       logger.json('Provider request', error.request);
       logger.json('Provider response', error.response);

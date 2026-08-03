@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.1.1
+
+- Add OpenCode gateway support for connected providers and models.
+- Add OpenCode provider status, model, and model-variant commands.
+- Use temporary OpenCode sessions with repository tools disabled.
+- Add a Git Commit Planner extension icon and README preview.
+
 ## 2.1.0
 
 - Add Codex provider support through the local Codex App Server.

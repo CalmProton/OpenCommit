@@ -1,10 +1,11 @@
 {
   "name": "git-commit-planner",
   "displayName": "Git Commit Planner",
-  "description": "AI Git commit message generator and commit planner for VS Code, powered by OpenRouter and Codex.",
-  "version": "2.1.0",
+  "description": "AI Git commit message generator and commit planner for VS Code, powered by OpenRouter, Codex, and OpenCode.",
+  "version": "2.1.1",
   "publisher": "MadElectron",
   "license": "MIT",
+  "icon": "icon.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/CalmProton/git-commit-planner.git"
@@ -32,6 +33,7 @@
     "openrouter",
     "openai",
     "codex",
+    "opencode",
     "ai"
   ],
   "main": "./dist/extension.js",
@@ -76,6 +78,21 @@
       {
         "command": "gitCommitPlanner.selectCodexReasoningEffort",
         "title": "Select Codex Reasoning Effort",
+        "category": "Git Commit Planner"
+      },
+      {
+        "command": "gitCommitPlanner.opencodeStatus",
+        "title": "Show OpenCode Provider Status",
+        "category": "Git Commit Planner"
+      },
+      {
+        "command": "gitCommitPlanner.selectOpenCodeModel",
+        "title": "Select OpenCode Model",
+        "category": "Git Commit Planner"
+      },
+      {
+        "command": "gitCommitPlanner.selectOpenCodeVariant",
+        "title": "Select OpenCode Model Variant",
         "category": "Git Commit Planner"
       },
       {
@@ -269,6 +286,15 @@
         },
         {
           "command": "gitCommitPlanner.selectCodexReasoningEffort"
+        },
+        {
+          "command": "gitCommitPlanner.opencodeStatus"
+        },
+        {
+          "command": "gitCommitPlanner.selectOpenCodeModel"
+        },
+        {
+          "command": "gitCommitPlanner.selectOpenCodeVariant"
         }
       ]
     },
@@ -280,10 +306,11 @@
           "scope": "resource",
           "enum": [
             "openrouter",
-            "codex"
+            "codex",
+            "opencode"
           ],
           "default": "openrouter",
-          "description": "Provider used to generate commit messages. Codex uses the local Codex App Server and ChatGPT sign-in."
+          "description": "Provider used to generate commit messages. OpenCode uses its local server and configured provider connections. Codex uses the local Codex App Server and ChatGPT sign-in."
         },
         "gitCommitPlanner.openRouter.baseUrl": {
           "type": "string",
@@ -326,6 +353,30 @@
           "scope": "resource",
           "default": "",
           "markdownDescription": "Optional reasoning effort for the selected Codex model. Leave blank to use the model default. Run **Git Commit Planner: Select Codex Reasoning Effort** from the Command Palette to choose a supported value."
+        },
+        "gitCommitPlanner.opencode.command": {
+          "type": "string",
+          "scope": "resource",
+          "default": "opencode",
+          "description": "OpenCode CLI command used to start the local OpenCode server."
+        },
+        "gitCommitPlanner.opencode.serverUrl": {
+          "type": "string",
+          "scope": "resource",
+          "default": "",
+          "markdownDescription": "Optional existing OpenCode server URL. Leave blank to start a local server. Example: `http://127.0.0.1:4096`."
+        },
+        "gitCommitPlanner.opencode.model": {
+          "type": "string",
+          "scope": "resource",
+          "default": "",
+          "markdownDescription": "Optional OpenCode provider/model reference, such as `openai/gpt-5`. Leave blank to use the OpenCode default. Run **Git Commit Planner: Select OpenCode Model** to choose a connected model."
+        },
+        "gitCommitPlanner.opencode.variant": {
+          "type": "string",
+          "scope": "resource",
+          "default": "",
+          "markdownDescription": "Optional OpenCode model variant. Leave blank to use the model default. Run **Git Commit Planner: Select OpenCode Model Variant** to choose a supported variant."
         },
         "gitCommitPlanner.format": {
           "type": "string",
@@ -405,7 +456,7 @@
           "default": 0.2,
           "minimum": 0,
           "maximum": 2,
-          "description": "OpenRouter sampling temperature. Codex uses the selected model defaults."
+          "description": "OpenRouter sampling temperature. Codex and OpenCode use the selected model defaults."
         },
         "gitCommitPlanner.maxOutputTokens": {
           "type": "number",
@@ -413,7 +464,7 @@
           "default": 800,
           "minimum": 50,
           "maximum": 128000,
-          "description": "Maximum OpenRouter output tokens for the generated commit message. Codex uses the selected model defaults."
+          "description": "Maximum OpenRouter output tokens for the generated commit message. Codex and OpenCode use the selected model defaults."
         },
         "gitCommitPlanner.maxPlanOutputTokens": {
           "type": "number",
@@ -421,7 +472,7 @@
           "default": 32000,
           "minimum": 1000,
           "maximum": 128000,
-          "description": "Maximum OpenRouter output tokens for Commit Planner JSON. Large plans need room for every planned commit and file path. Codex uses the selected model defaults."
+          "description": "Maximum OpenRouter output tokens for Commit Planner JSON. Large plans need room for every planned commit and file path. Codex and OpenCode use the selected model defaults."
         },
         "gitCommitPlanner.debugLogging": {
           "type": "boolean",

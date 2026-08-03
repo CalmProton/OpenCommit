@@ -1,6 +1,8 @@
 # Git Commit Planner
 
-VS Code extension for generating AI Git commit messages and planning clean multi-commit changes, powered by OpenRouter or Codex.
+VS Code extension for generating AI Git commit messages and planning clean multi-commit changes, powered by OpenRouter, Codex, or OpenCode.
+
+![Git Commit Planner preview](./docs/commit-planner-preview.png)
 
 ## Features
 
@@ -9,6 +11,7 @@ VS Code extension for generating AI Git commit messages and planning clean multi
 - Falls back to unstaged and untracked changes.
 - Writes the generated message into the built-in Git commit message input.
 - Supports OpenRouter API keys and ChatGPT sign-in through the local Codex App Server.
+- Supports OpenCode as a local gateway for the providers configured in OpenCode.
 - Does not store ChatGPT or Codex tokens in the extension.
 - Supports workspace settings in `.vscode/settings.json`.
 - Writes generation summaries to the `Git Commit Planner` output channel, with optional verbose diagnostics.
@@ -33,6 +36,9 @@ VS Code extension for generating AI Git commit messages and planning clean multi
 - `Git Commit Planner: Show Codex Account Status`
 - `Git Commit Planner: Select Codex Model`
 - `Git Commit Planner: Select Codex Reasoning Effort`
+- `Git Commit Planner: Show OpenCode Provider Status`
+- `Git Commit Planner: Select OpenCode Model`
+- `Git Commit Planner: Select OpenCode Model Variant`
 
 ## Settings
 
@@ -62,9 +68,13 @@ Do not store API keys in workspace settings. Run `Git Commit Planner: Set OpenRo
 
 When `gitCommitPlanner.provider` is `codex`, leave `gitCommitPlanner.codex.model` empty to use the Codex default. Run `Git Commit Planner: Select Codex Model` to read the current model list from Codex and save a model for the selected workspace. Model availability depends on the signed-in account. Run `Git Commit Planner: Select Codex Reasoning Effort` to choose a reasoning effort supported by the selected model. Leave it empty to use the model default.
 
+When `gitCommitPlanner.provider` is `opencode`, install the OpenCode CLI and run `opencode auth login` for the providers that you want to use. Git Commit Planner starts `opencode serve` on a local loopback port when `gitCommitPlanner.opencode.serverUrl` is empty. It reads the connected providers and models from that server. Leave `gitCommitPlanner.opencode.model` empty to use the OpenCode default, or run `Git Commit Planner: Select OpenCode Model` to save a `provider/model` reference for the selected workspace. Use `Git Commit Planner: Select OpenCode Model Variant` when the selected model provides variants. Set `gitCommitPlanner.opencode.serverUrl` when an OpenCode server already runs elsewhere.
+
+OpenCode can connect to many hosted providers and custom OpenAI-compatible endpoints. Git Commit Planner sends a temporary session request with repository tools disabled. OpenCode manages provider authentication; the extension does not store OpenCode provider credentials.
+
 `gitCommitPlanner.format` defaults to `conventional`. Set it to `simple` or `custom` only if a workspace needs a different style.
 
-For OpenRouter, the extension disables reasoning tokens by default because commit messages do not need hidden reasoning budgets. If OpenRouter still returns no message content, try increasing `gitCommitPlanner.maxOutputTokens` or choose a concrete non-reasoning model instead of `openrouter/auto`. For Codex, leave `gitCommitPlanner.codex.reasoningEffort` empty to use the selected model default. Commit Planner uses `gitCommitPlanner.maxPlanOutputTokens` because large plans need more room for JSON file lists.
+For OpenRouter, the extension disables reasoning tokens by default because commit messages do not need hidden reasoning budgets. If OpenRouter still returns no message content, try increasing `gitCommitPlanner.maxOutputTokens` or choose a concrete non-reasoning model instead of `openrouter/auto`. For Codex, leave `gitCommitPlanner.codex.reasoningEffort` empty to use the selected model default. OpenCode uses the selected model defaults. Commit Planner uses `gitCommitPlanner.maxPlanOutputTokens` because large plans need more room for JSON file lists.
 
 ## Conventional Commits
 
@@ -72,7 +82,7 @@ Git Commit Planner follows the [Conventional Commits 1.0.0 specification](https:
 
 ## Privacy
 
-Git Commit Planner reads Git diffs from the selected repository only when you run a generation command. With OpenRouter, the diff and prompt are sent to the configured OpenRouter API endpoint. Your OpenRouter API key is stored in VS Code SecretStorage and is not written to workspace settings. With Codex, the extension sends the prompt through the local Codex App Server. Codex handles ChatGPT authentication and account tokens; the extension does not read or store them. Codex turns use read-only sandbox access and are ephemeral.
+Git Commit Planner reads Git diffs from the selected repository only when you run a generation command. With OpenRouter, the diff and prompt are sent to the configured OpenRouter API endpoint. Your OpenRouter API key is stored in VS Code SecretStorage and is not written to workspace settings. With Codex, the extension sends the prompt through the local Codex App Server. With OpenCode, the extension sends the prompt through the configured local or existing OpenCode server. Codex and OpenCode manage their own provider authentication; the extension does not read or store those credentials. Generation sessions are temporary and repository tools are disabled.
 
 ## Large Changes
 
@@ -135,6 +145,6 @@ bun run compile
 bun test
 ```
 
-Codex support requires a working `codex` command. Set `gitCommitPlanner.codex.command` to the full executable path when `codex` is not available on PATH.
+Codex support requires a working `codex` command. Set `gitCommitPlanner.codex.command` to the full executable path when `codex` is not available on PATH. OpenCode support requires a working `opencode` command, or an existing server URL in `gitCommitPlanner.opencode.serverUrl`. Set `gitCommitPlanner.opencode.command` when `opencode` is not available on PATH.
 
 Press `F5` in VS Code to launch an Extension Development Host.
