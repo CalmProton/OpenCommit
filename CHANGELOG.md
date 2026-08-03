@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.2.0
+
+- Rewrite the README and setting descriptions with ASD-STE100 writing principles.
+- Use short, active sentences for user instructions and setting help.
+
 ## 2.1.1
 
 - Group settings into General, provider, prompt, and diagnostics categories.

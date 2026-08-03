@@ -1,8 +1,8 @@
 {
   "name": "git-commit-planner",
   "displayName": "Git Commit Planner",
-  "description": "AI Git commit message generator and commit planner for VS Code, powered by OpenRouter, Codex, and OpenCode.",
-  "version": "2.1.1",
+  "description": "Generate Git commit messages and plan multi-commit changes in VS Code with OpenRouter, Codex, or OpenCode.",
+  "version": "2.2.0",
   "publisher": "MadElectron",
   "license": "MIT",
   "icon": "icon.png",
@@ -314,7 +314,7 @@
             ],
             "default": "openrouter",
             "order": 1,
-            "description": "Provider used to generate commit messages. OpenCode uses its local server and configured provider connections. Codex uses the local Codex App Server and ChatGPT sign-in."
+            "description": "Selects the provider for commit message generation. OpenCode uses its local server and configured providers. Codex uses the local Codex App Server."
           },
           "gitCommitPlanner.format": {
             "type": "string",
@@ -326,7 +326,7 @@
             ],
             "default": "conventional",
             "order": 2,
-            "description": "Commit message style. Conventional Commits is the default standard."
+            "description": "Sets the commit message format. The default is Conventional Commits."
           },
           "gitCommitPlanner.includeBody": {
             "type": "string",
@@ -338,28 +338,28 @@
             ],
             "default": "auto",
             "order": 3,
-            "description": "Whether generated commit messages should include a body."
+            "description": "Controls whether the generated commit message has a body."
           },
           "gitCommitPlanner.language": {
             "type": "string",
             "scope": "resource",
             "default": "en",
             "order": 4,
-            "description": "Language for the generated commit message."
+            "description": "Sets the language for the generated commit message."
           },
           "gitCommitPlanner.customInstructions": {
             "type": "string",
             "scope": "resource",
             "default": "",
             "order": 5,
-            "markdownDescription": "Additional prompt instructions. Used together with built-in rules, and especially useful when `gitCommitPlanner.format` is `custom`."
+            "markdownDescription": "Adds instructions to the built-in prompt. Use this field when `gitCommitPlanner.format` is `custom`."
           },
           "gitCommitPlanner.preferStaged": {
             "type": "boolean",
             "scope": "resource",
             "default": true,
             "order": 6,
-            "description": "Use staged changes when any are present; otherwise use unstaged changes."
+            "description": "Uses staged changes when they exist. Otherwise, uses unstaged changes."
           }
         }
       },
@@ -373,28 +373,28 @@
             "scope": "resource",
             "default": "https://openrouter.ai/api/v1",
             "order": 1,
-            "description": "OpenRouter API base URL."
+            "description": "Sets the OpenRouter API base URL."
           },
           "gitCommitPlanner.openRouter.model": {
             "type": "string",
             "scope": "resource",
             "default": "openrouter/auto",
             "order": 2,
-            "description": "OpenRouter model id used for commit message generation."
+            "description": "Sets the OpenRouter model ID for commit message generation."
           },
           "gitCommitPlanner.openRouter.siteUrl": {
             "type": "string",
             "scope": "resource",
             "default": "",
             "order": 3,
-            "description": "Optional HTTP-Referer header value sent to OpenRouter."
+            "description": "Sets the optional HTTP-Referer header value for OpenRouter."
           },
           "gitCommitPlanner.openRouter.appTitle": {
             "type": "string",
             "scope": "resource",
             "default": "Git Commit Planner VS Code Extension",
             "order": 4,
-            "description": "Optional X-Title header value sent to OpenRouter."
+            "description": "Sets the optional X-Title header value for OpenRouter."
           }
         }
       },
@@ -408,21 +408,21 @@
             "scope": "resource",
             "default": "codex",
             "order": 1,
-            "description": "Codex CLI command used to start the local Codex App Server."
+            "description": "Sets the Codex CLI command that starts the local Codex App Server."
           },
           "gitCommitPlanner.codex.model": {
             "type": "string",
             "scope": "resource",
             "default": "",
             "order": 2,
-            "markdownDescription": "Codex model id. Leave blank to use the Codex default. Run **Git Commit Planner: Select Codex Model** from the Command Palette to choose from models available to your account."
+            "markdownDescription": "Sets the Codex model ID. Leave this field empty to use the Codex default. Use **Git Commit Planner: Select Codex Model** to choose a model for the account."
           },
           "gitCommitPlanner.codex.reasoningEffort": {
             "type": "string",
             "scope": "resource",
             "default": "",
             "order": 3,
-            "markdownDescription": "Optional reasoning effort for the selected Codex model. Leave blank to use the model default. Run **Git Commit Planner: Select Codex Reasoning Effort** from the Command Palette to choose a supported value."
+            "markdownDescription": "Sets the reasoning effort for the selected Codex model. Leave this field empty to use the model default. Use **Git Commit Planner: Select Codex Reasoning Effort** to choose a value."
           }
         }
       },
@@ -436,28 +436,28 @@
             "scope": "resource",
             "default": "opencode",
             "order": 1,
-            "description": "OpenCode CLI command used to start the local OpenCode server."
+            "description": "Sets the OpenCode CLI command that starts the local OpenCode server."
           },
           "gitCommitPlanner.opencode.serverUrl": {
             "type": "string",
             "scope": "resource",
             "default": "",
             "order": 2,
-            "markdownDescription": "Optional existing OpenCode server URL. Leave blank to start a local server. Example: `http://127.0.0.1:4096`."
+            "markdownDescription": "Sets an existing OpenCode server URL. Leave this field empty to start a local server. Example: `http://127.0.0.1:4096`."
           },
           "gitCommitPlanner.opencode.model": {
             "type": "string",
             "scope": "resource",
             "default": "",
             "order": 3,
-            "markdownDescription": "Optional OpenCode provider/model reference, such as `openai/gpt-5`. Leave blank to use the OpenCode default. Run **Git Commit Planner: Select OpenCode Model** to choose a connected model."
+            "markdownDescription": "Sets the OpenCode provider/model reference. Leave this field empty to use the OpenCode default. Use **Git Commit Planner: Select OpenCode Model** to choose a connected model."
           },
           "gitCommitPlanner.opencode.variant": {
             "type": "string",
             "scope": "resource",
             "default": "",
             "order": 4,
-            "markdownDescription": "Optional OpenCode model variant. Leave blank to use the model default. Run **Git Commit Planner: Select OpenCode Model Variant** to choose a supported variant."
+            "markdownDescription": "Sets the OpenCode model variant. Leave this field empty to use the model default. Use **Git Commit Planner: Select OpenCode Model Variant** to choose a variant."
           }
         }
       },
@@ -473,7 +473,7 @@
             "minimum": 0,
             "maximum": 2000000,
             "order": 1,
-            "markdownDescription": "Optional character cap for diff content. Set to `0` to use token budgeting from `gitCommitPlanner.modelContextTokens` and `gitCommitPlanner.maxPromptContextRatio`."
+            "markdownDescription": "Sets the maximum number of characters in the diff. Set this value to `0` to use token budgeting."
           },
           "gitCommitPlanner.modelContextTokens": {
             "type": "number",
@@ -482,7 +482,7 @@
             "minimum": 4096,
             "maximum": 2000000,
             "order": 2,
-            "description": "Assumed model context window in tokens. Used for local prompt budgeting; OpenRouter metadata is not fetched automatically."
+            "description": "Sets the assumed model context size in tokens. The extension uses this value for prompt budgeting."
           },
           "gitCommitPlanner.maxPromptContextRatio": {
             "type": "number",
@@ -491,7 +491,7 @@
             "minimum": 0.05,
             "maximum": 0.95,
             "order": 3,
-            "description": "Maximum fraction of the configured model context window used for the prompt."
+            "description": "Sets the maximum fraction of the model context that the prompt can use."
           },
           "gitCommitPlanner.maxPromptTokens": {
             "type": "number",
@@ -500,7 +500,7 @@
             "minimum": 0,
             "maximum": 2000000,
             "order": 4,
-            "markdownDescription": "Optional direct prompt token budget. Set to `0` to calculate it from `gitCommitPlanner.modelContextTokens * gitCommitPlanner.maxPromptContextRatio`."
+            "markdownDescription": "Sets the prompt token limit. Set this value to `0` to calculate the limit from the model context and prompt ratio."
           },
           "gitCommitPlanner.temperature": {
             "type": "number",
@@ -509,7 +509,7 @@
             "minimum": 0,
             "maximum": 2,
             "order": 5,
-            "description": "OpenRouter sampling temperature. Codex and OpenCode use the selected model defaults."
+            "description": "Sets the OpenRouter sampling temperature. Codex and OpenCode use their model defaults."
           },
           "gitCommitPlanner.maxOutputTokens": {
             "type": "number",
@@ -518,7 +518,7 @@
             "minimum": 50,
             "maximum": 128000,
             "order": 6,
-            "description": "Maximum OpenRouter output tokens for the generated commit message. Codex and OpenCode use the selected model defaults."
+            "description": "Sets the maximum OpenRouter output tokens for a commit message. Codex and OpenCode use their model defaults."
           },
           "gitCommitPlanner.maxPlanOutputTokens": {
             "type": "number",
@@ -527,7 +527,7 @@
             "minimum": 1000,
             "maximum": 128000,
             "order": 7,
-            "description": "Maximum OpenRouter output tokens for Commit Planner JSON. Large plans need room for every planned commit and file path. Codex and OpenCode use the selected model defaults."
+            "description": "Sets the maximum OpenRouter output tokens for Commit Planner JSON. Codex and OpenCode use their model defaults."
           }
         }
       },
@@ -541,7 +541,7 @@
             "scope": "resource",
             "default": false,
             "order": 1,
-            "description": "Write detailed prompts, diffs, redacted request metadata, raw provider responses, and final commit message cleanup details to the Git Commit Planner output channel."
+            "description": "Writes detailed generation data to the Git Commit Planner output channel. This data includes prompts, diffs, redacted requests, provider responses, and message cleanup."
           }
         }
       }
