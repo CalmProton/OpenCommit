@@ -2,6 +2,7 @@
 
 ## 2.1.1
 
+- Group settings into General, provider, prompt, and diagnostics categories.
 - Add OpenCode gateway support for connected providers and models.
 - Add OpenCode provider status, model, and model-variant commands.
 - Use temporary OpenCode sessions with repository tools disabled.

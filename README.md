@@ -40,6 +40,8 @@ VS Code extension for generating AI Git commit messages and planning clean multi
 - `Git Commit Planner: Select OpenCode Model`
 - `Git Commit Planner: Select OpenCode Model Variant`
 
+![Git Commit Planner commands in the VS Code Command Palette](./docs/command-palette.png)
+
 ## Settings
 
 Example `.vscode/settings.json`:
@@ -63,6 +65,8 @@ Example `.vscode/settings.json`:
   "gitCommitPlanner.customInstructions": "Use concise commit messages. Avoid mentioning generated files unless they are the main change."
 }
 ```
+
+The Settings editor groups Git Commit Planner settings into General, OpenRouter, Codex, OpenCode, Prompt & Limits, and Diagnostics categories. The setting names in `settings.json` stay unchanged.
 
 Do not store API keys in workspace settings. Run `Git Commit Planner: Set OpenRouter API Key` instead. For Codex, install the Codex CLI, select `codex` as the provider, and run `Git Commit Planner: Sign in to Codex with ChatGPT`.
 
