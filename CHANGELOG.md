@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.1.0
+
+- Add Codex provider support through the local Codex App Server.
+- Add ChatGPT sign-in, account status, sign-out, and current model selection commands.
+- Add dynamic model and reasoning-effort selection commands for Codex settings.
+- Route single-message generation and Commit Planner requests through the selected provider.
+- Keep Codex turns read-only and ephemeral. The extension does not store ChatGPT tokens.
+
 ## 2.0.0
 
 - Rename the extension to Git Commit Planner for Marketplace availability.

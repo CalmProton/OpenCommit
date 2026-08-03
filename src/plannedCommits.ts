@@ -15,7 +15,8 @@ import {
   Repository
 } from './git';
 import { createLogger, Logger } from './logger';
-import { createOpenRouterCommitMessage, OpenRouterResponseError } from './openrouter';
+import { CodexResponseError } from './codexAppServer';
+import { OpenRouterResponseError } from './openrouter';
 import {
   buildPlannedCommitMessageMessages,
   buildPlanMessages,
@@ -23,6 +24,8 @@ import {
   parsePlannedCommits,
   sanitizeCommitMessage
 } from './prompt';
+import { COMMIT_MESSAGE_OUTPUT_SCHEMA, COMMIT_PLAN_OUTPUT_SCHEMA } from './codexProtocol';
+import { ProviderService } from './provider';
 import { ExtensionSettings, getSettings } from './settings';
 
 const TREE_ID = 'gitCommitPlanner.plannedCommits';
@@ -66,9 +69,9 @@ let nextGroupId = 1;
 export function registerPlannedCommits(
   context: vscode.ExtensionContext,
   output: vscode.OutputChannel,
-  ensureApiKey: () => Promise<string | undefined>
+  provider: ProviderService
 ): void {
-  const controller = new PlannedCommitsController(context, output, ensureApiKey);
+  const controller = new PlannedCommitsController(context, output, provider);
 
   context.subscriptions.push(
     controller,
@@ -104,7 +107,7 @@ class PlannedCommitsController implements
   constructor(
     private readonly context: vscode.ExtensionContext,
     private readonly output: vscode.OutputChannel,
-    private readonly ensureApiKey: () => Promise<string | undefined>
+    private readonly provider: ProviderService
   ) {
     this.tree = vscode.window.createTreeView(TREE_ID, {
       treeDataProvider: this,
@@ -188,16 +191,15 @@ class PlannedCommitsController implements
 
   async planCommits(): Promise<void> {
     await this.runWithErrors(async () => {
-      const apiKey = await this.ensureApiKey();
-
-      if (!apiKey) {
-        return;
-      }
-
       const git = await getGitApi();
       const repository = await pickRepository(git);
 
       if (!repository) {
+        return;
+      }
+
+      const settings = getSettings(repository.rootUri);
+      if (!(await this.provider.ensureAccess(settings))) {
         return;
       }
 
@@ -212,7 +214,6 @@ class PlannedCommitsController implements
           const cancellation = token.onCancellationRequested(() => abortController.abort());
 
           try {
-            const settings = getSettings(repository.rootUri);
             const planSettings = {
               ...settings,
               maxOutputTokens: settings.maxPlanOutputTokens
@@ -239,7 +240,7 @@ class PlannedCommitsController implements
             logger.line(`Extension version: ${this.context.extension.packageJSON.version}`);
             logger.json('Planning summary', {
               provider: settings.provider,
-              model: settings.openRouter.model,
+              model: modelLabel(settings),
               repository: repository.rootUri.fsPath,
               files: diffContext.files,
               diffChars: diffContext.diff.length,
@@ -248,25 +249,31 @@ class PlannedCommitsController implements
             });
 
             if (settings.debugLogging) {
-              logger.text('Diff sent to OpenRouter', diffContext.diff);
-              logger.json('Messages sent to OpenRouter', messages);
+              logger.text('Diff sent to provider', diffContext.diff);
+              logger.json('Messages sent to provider', messages);
             }
 
-            const result = await createOpenRouterCommitMessage(apiKey, messages, planSettings, abortController.signal);
+            const result = await this.provider.generate(
+              planSettings,
+              messages,
+              repository.rootUri.fsPath,
+              COMMIT_PLAN_OUTPUT_SCHEMA,
+              abortController.signal
+            );
             const parsed = parsePlannedCommits(result.text);
 
             if (settings.debugLogging) {
-              logger.json('OpenRouter request', result.request);
-              logger.json('OpenRouter response summary', result.response.choiceSummary);
-              logger.text('OpenRouter raw response body', result.response.bodyText);
+              logger.json('Provider request', result.request);
+              logger.json('Provider response', result.response);
               logger.text('Extracted model text', result.text);
             } else {
-              logger.json('OpenRouter response summary', result.response.choiceSummary);
+              logger.json('Provider response summary', responseSummary(result.response));
             }
 
             const expectedFiles = diffContext.files.map(file => file.path);
             const commits = await buildValidatedPlan({
-              apiKey,
+              provider: this.provider,
+              cwd: repository.rootUri.fsPath,
               settings: planSettings,
               allFiles: diffContext.files,
               initialPlanText: result.text,
@@ -426,9 +433,8 @@ class PlannedCommitsController implements
         throw new Error(`Planned commit "${firstLine(commit.message)}" has no files to describe.`);
       }
 
-      const apiKey = await this.ensureApiKey();
-
-      if (!apiKey) {
+      const settings = getSettings(this.plan.repository.rootUri);
+      if (!(await this.provider.ensureAccess(settings))) {
         return;
       }
 
@@ -443,7 +449,6 @@ class PlannedCommitsController implements
           const cancellation = token.onCancellationRequested(() => abortController.abort());
 
           try {
-            const settings = getSettings(this.plan!.repository.rootUri);
             const logger = createLogger(this.output);
             const messages = buildPlannedCommitMessageMessages({
               diff: this.plan!.diffContext.diff,
@@ -454,7 +459,13 @@ class PlannedCommitsController implements
               truncated: this.plan!.diffContext.truncated,
               settings
             });
-            const result = await createOpenRouterCommitMessage(apiKey, messages, settings, abortController.signal);
+            const result = await this.provider.generate(
+              settings,
+              messages,
+              this.plan!.repository.rootUri.fsPath,
+              COMMIT_MESSAGE_OUTPUT_SCHEMA,
+              abortController.signal
+            );
             const message = sanitizeCommitMessage(result.text);
 
             if (!message.trim()) {
@@ -791,11 +802,10 @@ class PlannedCommitsController implements
     } catch (error) {
       const logger = createLogger(this.output);
 
-      if (error instanceof OpenRouterResponseError) {
-        logger.section('OpenRouter failure diagnostics');
-        logger.json('OpenRouter request', error.request);
-        logger.json('OpenRouter response summary', error.response.choiceSummary);
-        logger.text('OpenRouter raw response body', error.response.bodyText);
+      if (error instanceof OpenRouterResponseError || error instanceof CodexResponseError) {
+        logger.section('Provider failure diagnostics');
+        logger.json('Provider request', error.request);
+        logger.json('Provider response', error.response);
       }
 
       const message = error instanceof Error ? error.message : String(error);
@@ -845,7 +855,8 @@ class FileTreeItem extends vscode.TreeItem {
 }
 
 async function buildValidatedPlan(input: {
-  apiKey: string;
+  provider: ProviderService;
+  cwd: string;
   settings: ExtensionSettings;
   allFiles: readonly PlanChangedFile[];
   initialPlanText: string;
@@ -868,7 +879,8 @@ async function buildValidatedPlan(input: {
 
   for (let attempt = 1; attempt <= PLAN_REPAIR_ATTEMPTS; attempt += 1) {
     const repaired = await requestPlanRepair({
-      apiKey: input.apiKey,
+      provider: input.provider,
+      cwd: input.cwd,
       settings: input.settings,
       allFiles: input.allFiles,
       planText,
@@ -902,7 +914,8 @@ async function buildValidatedPlan(input: {
 }
 
 async function requestPlanRepair(input: {
-  apiKey: string;
+  provider: ProviderService;
+  cwd: string;
   settings: ExtensionSettings;
   allFiles: readonly PlanChangedFile[];
   planText: string;
@@ -925,19 +938,24 @@ async function requestPlanRepair(input: {
 
   input.logger.section(`Commit plan repair attempt ${input.attempt}`);
   if (input.debugLogging) {
-    input.logger.json('Repair messages sent to OpenRouter', messages);
+    input.logger.json('Repair messages sent to provider', messages);
   }
 
   try {
-    const result = await createOpenRouterCommitMessage(input.apiKey, messages, input.settings, input.signal);
+    const result = await input.provider.generate(
+      input.settings,
+      messages,
+      input.cwd,
+      COMMIT_PLAN_OUTPUT_SCHEMA,
+      input.signal
+    );
 
     if (input.debugLogging) {
-      input.logger.json('OpenRouter repair request', result.request);
-      input.logger.json('OpenRouter repair response summary', result.response.choiceSummary);
-      input.logger.text('OpenRouter repair raw response body', result.response.bodyText);
+      input.logger.json('Provider repair request', result.request);
+      input.logger.json('Provider repair response', result.response);
       input.logger.text('Extracted repair model text', result.text);
     } else {
-      input.logger.json('OpenRouter repair response summary', result.response.choiceSummary);
+      input.logger.json('Provider repair response summary', responseSummary(result.response));
     }
 
     return { text: result.text };
@@ -948,11 +966,10 @@ async function requestPlanRepair(input: {
 
     input.logger.error(error);
 
-    if (error instanceof OpenRouterResponseError) {
-      input.logger.section('OpenRouter repair failure diagnostics');
-      input.logger.json('OpenRouter repair request', error.request);
-      input.logger.json('OpenRouter repair response summary', error.response.choiceSummary);
-      input.logger.text('OpenRouter repair raw response body', error.response.bodyText);
+    if (error instanceof OpenRouterResponseError || error instanceof CodexResponseError) {
+      input.logger.section('Provider repair failure diagnostics');
+      input.logger.json('Provider repair request', error.request);
+      input.logger.json('Provider repair response', error.response);
     }
 
     return undefined;
@@ -976,7 +993,7 @@ function analyzePlan(
         ...issues,
         missing: [...expectedFiles]
       },
-      message: 'OpenRouter did not return a valid commit plan JSON object.'
+      message: 'The provider did not return a valid commit plan JSON object.'
     };
   }
 
@@ -1009,7 +1026,7 @@ function analyzePlan(
     message: valid
       ? 'Commit plan is valid.'
       : [
-        'OpenRouter returned an invalid commit plan.',
+        'The provider returned an invalid commit plan.',
         issues.unknown.length > 0 ? `Unknown files: ${issues.unknown.length}` : '',
         issues.duplicate.length > 0 ? `Duplicate files: ${issues.duplicate.length}` : '',
         issues.missing.length > 0 ? `Missing files: ${issues.missing.length}` : ''
@@ -1168,6 +1185,21 @@ function createGroupId(): string {
 
 function firstLine(value: string): string {
   return value.split(/\r?\n/)[0]?.trim() || 'Untitled commit group';
+}
+
+function modelLabel(settings: ExtensionSettings): string {
+  return settings.provider === 'codex'
+    ? settings.codex.model.trim() || '(Codex default)'
+    : settings.openRouter.model;
+}
+
+function responseSummary(response: unknown): unknown {
+  if (!response || typeof response !== 'object') {
+    return response;
+  }
+
+  const record = response as Record<string, unknown>;
+  return record.choiceSummary ?? record.resultSummary ?? response;
 }
 
 function unique(values: readonly string[]): string[] {

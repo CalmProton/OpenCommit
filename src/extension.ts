@@ -1,40 +1,46 @@
 import * as vscode from 'vscode';
 import { buildDiffContext, getGitApi, pickRepository } from './git';
 import { createLogger } from './logger';
-import { createOpenRouterCommitMessage, OpenRouterResponseError } from './openrouter';
+import { CodexResponseError } from './codexAppServer';
+import { OpenRouterResponseError } from './openrouter';
 import { registerPlannedCommits } from './plannedCommits';
+import { ProviderService } from './provider';
 import { buildCommitMessageRepairMessages, buildMessages, parseCommitMessage } from './prompt';
-import { clearOpenRouterApiKey, getOpenRouterApiKey, promptForOpenRouterApiKey } from './secrets';
+import { COMMIT_MESSAGE_OUTPUT_SCHEMA } from './codexProtocol';
+import { clearOpenRouterApiKey, promptForOpenRouterApiKey } from './secrets';
 import { getSettings } from './settings';
 
 let output: vscode.OutputChannel;
+let providerService: ProviderService;
 const COMMIT_MESSAGE_REPAIR_ATTEMPTS = 2;
 
 export function activate(context: vscode.ExtensionContext): void {
   output = vscode.window.createOutputChannel('Git Commit Planner');
+  providerService = new ProviderService(context);
 
   context.subscriptions.push(
     output,
-    vscode.commands.registerCommand('gitCommitPlanner.generate', () => generateCommitMessage(context)),
+    providerService,
+    vscode.commands.registerCommand('gitCommitPlanner.generate', () => generateCommitMessage(context, providerService)),
     vscode.commands.registerCommand('gitCommitPlanner.setOpenRouterApiKey', () => promptForOpenRouterApiKey(context.secrets)),
-    vscode.commands.registerCommand('gitCommitPlanner.clearOpenRouterApiKey', () => clearOpenRouterApiKey(context.secrets))
+    vscode.commands.registerCommand('gitCommitPlanner.clearOpenRouterApiKey', () => clearOpenRouterApiKey(context.secrets)),
+    vscode.commands.registerCommand('gitCommitPlanner.codexSignIn', () => runProviderCommand(() => providerService.signIn())),
+    vscode.commands.registerCommand('gitCommitPlanner.codexSignOut', () => runProviderCommand(() => providerService.signOut())),
+    vscode.commands.registerCommand('gitCommitPlanner.codexStatus', () => runProviderCommand(() => providerService.showStatus())),
+    vscode.commands.registerCommand('gitCommitPlanner.selectCodexModel', () => runProviderCommand(() => providerService.selectModel())),
+    vscode.commands.registerCommand('gitCommitPlanner.selectCodexReasoningEffort', () => runProviderCommand(() => providerService.selectReasoningEffort()))
   );
 
-  registerPlannedCommits(context, output, () => ensureOpenRouterApiKey(context));
+  registerPlannedCommits(context, output, providerService);
 }
 
 export function deactivate(): void {
+  providerService?.dispose();
   output?.dispose();
 }
 
-async function generateCommitMessage(context: vscode.ExtensionContext): Promise<void> {
+async function generateCommitMessage(context: vscode.ExtensionContext, providers: ProviderService): Promise<void> {
   try {
-    const apiKey = await ensureOpenRouterApiKey(context);
-
-    if (!apiKey) {
-      return;
-    }
-
     const git = await getGitApi();
     const repository = await pickRepository(git);
 
@@ -43,6 +49,10 @@ async function generateCommitMessage(context: vscode.ExtensionContext): Promise<
     }
 
     const settings = getSettings(repository.rootUri);
+
+    if (!(await providers.ensureAccess(settings))) {
+      return;
+    }
 
     await vscode.window.withProgress(
       {
@@ -72,7 +82,7 @@ async function generateCommitMessage(context: vscode.ExtensionContext): Promise<
           logger.line(`Debug logging: ${settings.debugLogging ? 'enabled' : 'disabled'}`);
           logger.json('Generation summary', {
             provider: settings.provider,
-            model: settings.openRouter.model,
+            model: modelLabel(settings),
             format: settings.format,
             includeBody: settings.includeBody,
             diffChars: diffContext.diff.length,
@@ -88,8 +98,11 @@ async function generateCommitMessage(context: vscode.ExtensionContext): Promise<
           if (settings.debugLogging) {
             logger.json('Settings', {
               provider: settings.provider,
-              model: settings.openRouter.model,
-              baseUrl: settings.openRouter.baseUrl,
+              model: modelLabel(settings),
+              ...(settings.provider === 'openrouter' ? { baseUrl: settings.openRouter.baseUrl } : {
+                codexCommand: settings.codex.command,
+                reasoningEffort: settings.codex.reasoningEffort
+              }),
               format: settings.format,
               includeBody: settings.includeBody,
               preferStaged: settings.preferStaged,
@@ -117,21 +130,26 @@ async function generateCommitMessage(context: vscode.ExtensionContext): Promise<
               workingTreeChanges: repository.state.workingTreeChanges.length,
               untrackedChanges: repository.state.untrackedChanges.length
             });
-            logger.text('Diff sent to OpenRouter', diffContext.diff);
-            logger.json('Messages sent to OpenRouter', messages);
+            logger.text('Diff sent to provider', diffContext.diff);
+            logger.json('Messages sent to provider', messages);
           } else {
             logger.line('Enable gitCommitPlanner.debugLogging for full diff, prompt, request, and response diagnostics.');
           }
 
-          let result = await createOpenRouterCommitMessage(apiKey, messages, settings, abortController.signal);
+          let result = await providers.generate(
+            settings,
+            messages,
+            repository.rootUri.fsPath,
+            COMMIT_MESSAGE_OUTPUT_SCHEMA,
+            abortController.signal
+          );
 
           if (settings.debugLogging) {
-            logger.json('OpenRouter request', result.request);
-            logger.json('OpenRouter response summary', result.response.choiceSummary);
-            logger.text('OpenRouter raw response body', result.response.bodyText);
+            logger.json('Provider request', result.request);
+            logger.json('Provider response', result.response);
             logger.text('Extracted model text', result.text);
           } else {
-            logger.json('OpenRouter response summary', result.response.choiceSummary);
+            logger.json('Provider response summary', responseSummary(result.response));
           }
 
           let message = parseCommitMessage(result.text);
@@ -147,18 +165,23 @@ async function generateCommitMessage(context: vscode.ExtensionContext): Promise<
             });
 
             if (settings.debugLogging) {
-              logger.json('Repair messages sent to OpenRouter', repairMessages);
+              logger.json('Repair messages sent to provider', repairMessages);
             }
 
-            result = await createOpenRouterCommitMessage(apiKey, repairMessages, settings, abortController.signal);
+            result = await providers.generate(
+              settings,
+              repairMessages,
+              repository.rootUri.fsPath,
+              COMMIT_MESSAGE_OUTPUT_SCHEMA,
+              abortController.signal
+            );
 
             if (settings.debugLogging) {
-              logger.json('OpenRouter repair request', result.request);
-              logger.json('OpenRouter repair response summary', result.response.choiceSummary);
-              logger.text('OpenRouter repair raw response body', result.response.bodyText);
+              logger.json('Provider repair request', result.request);
+              logger.json('Provider repair response', result.response);
               logger.text('Extracted repair model text', result.text);
             } else {
-              logger.json('OpenRouter repair response summary', result.response.choiceSummary);
+              logger.json('Provider repair response summary', responseSummary(result.response));
             }
 
             message = parseCommitMessage(result.text);
@@ -166,7 +189,7 @@ async function generateCommitMessage(context: vscode.ExtensionContext): Promise<
           }
 
           if (!message?.trim()) {
-            throw new Error(`OpenRouter did not return a parseable commit message after ${COMMIT_MESSAGE_REPAIR_ATTEMPTS} repair attempts.`);
+            throw new Error(`The provider did not return a parseable commit message after ${COMMIT_MESSAGE_REPAIR_ATTEMPTS} repair attempts.`);
           }
 
           repository.inputBox.value = message;
@@ -178,11 +201,10 @@ async function generateCommitMessage(context: vscode.ExtensionContext): Promise<
     );
   } catch (error) {
     const logger = createLogger(output);
-    if (error instanceof OpenRouterResponseError) {
-      logger.section('OpenRouter failure diagnostics');
-      logger.json('OpenRouter request', error.request);
-      logger.json('OpenRouter response summary', error.response.choiceSummary);
-      logger.text('OpenRouter raw response body', error.response.bodyText);
+    if (error instanceof OpenRouterResponseError || error instanceof CodexResponseError) {
+      logger.section('Provider failure diagnostics');
+      logger.json('Provider request', error.request);
+      logger.json('Provider response', error.response);
     }
 
     const message = error instanceof Error ? error.message : String(error);
@@ -191,23 +213,33 @@ async function generateCommitMessage(context: vscode.ExtensionContext): Promise<
   }
 }
 
-async function ensureOpenRouterApiKey(context: vscode.ExtensionContext): Promise<string | undefined> {
-  const existing = await getOpenRouterApiKey(context.secrets);
+function modelLabel(settings: ReturnType<typeof getSettings>): string {
+  return settings.provider === 'codex'
+    ? settings.codex.model.trim() || '(Codex default)'
+    : settings.openRouter.model;
+}
 
-  if (existing) {
-    return existing;
+function responseSummary(response: unknown): unknown {
+  if (!response || typeof response !== 'object') {
+    return response;
   }
 
-  const action = await vscode.window.showWarningMessage(
-    'OpenRouter API key is not configured.',
-    { modal: false },
-    'Set API Key'
-  );
+  const record = response as Record<string, unknown>;
+  return record.choiceSummary ?? record.resultSummary ?? response;
+}
 
-  if (action !== 'Set API Key') {
-    return undefined;
+async function runProviderCommand(action: () => Promise<unknown>): Promise<void> {
+  try {
+    await action();
+  } catch (error) {
+    const logger = createLogger(output);
+    if (error instanceof OpenRouterResponseError || error instanceof CodexResponseError) {
+      logger.section('Provider failure diagnostics');
+      logger.json('Provider request', error.request);
+      logger.json('Provider response', error.response);
+    }
+    logger.error(error);
+    const message = error instanceof Error ? error.message : String(error);
+    vscode.window.showErrorMessage(`Git Commit Planner: ${message}`);
   }
-
-  await promptForOpenRouterApiKey(context.secrets);
-  return getOpenRouterApiKey(context.secrets);
 }

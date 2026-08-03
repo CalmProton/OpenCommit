@@ -2,14 +2,21 @@ import * as vscode from 'vscode';
 
 export type CommitFormat = 'conventional' | 'simple' | 'custom';
 export type IncludeBody = 'never' | 'auto' | 'always';
+export type Provider = 'openrouter' | 'codex';
+export type CodexReasoningEffort = string;
 
 export interface ExtensionSettings {
-  provider: 'openrouter';
+  provider: Provider;
   openRouter: {
     baseUrl: string;
     model: string;
     siteUrl: string;
     appTitle: string;
+  };
+  codex: {
+    command: string;
+    model: string;
+    reasoningEffort: CodexReasoningEffort;
   };
   format: CommitFormat;
   includeBody: IncludeBody;
@@ -30,12 +37,17 @@ export function getSettings(resource?: vscode.Uri): ExtensionSettings {
   const config = vscode.workspace.getConfiguration('gitCommitPlanner', resource);
 
   return {
-    provider: config.get<'openrouter'>('provider', 'openrouter'),
+    provider: config.get<Provider>('provider', 'openrouter'),
     openRouter: {
       baseUrl: config.get<string>('openRouter.baseUrl', 'https://openrouter.ai/api/v1'),
       model: config.get<string>('openRouter.model', 'openrouter/auto'),
       siteUrl: config.get<string>('openRouter.siteUrl', ''),
       appTitle: config.get<string>('openRouter.appTitle', 'Git Commit Planner VS Code Extension')
+    },
+    codex: {
+      command: config.get<string>('codex.command', 'codex'),
+      model: config.get<string>('codex.model', ''),
+      reasoningEffort: config.get<CodexReasoningEffort>('codex.reasoningEffort', '')
     },
     format: config.get<CommitFormat>('format', 'conventional'),
     includeBody: config.get<IncludeBody>('includeBody', 'auto'),

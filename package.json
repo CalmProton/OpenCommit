@@ -1,8 +1,8 @@
 {
   "name": "git-commit-planner",
   "displayName": "Git Commit Planner",
-  "description": "AI Git commit message generator and commit planner for VS Code, powered by OpenRouter.",
-  "version": "2.0.0",
+  "description": "AI Git commit message generator and commit planner for VS Code, powered by OpenRouter and Codex.",
+  "version": "2.1.0",
   "publisher": "MadElectron",
   "license": "MIT",
   "repository": {
@@ -30,6 +30,8 @@
     "commit planner",
     "source control",
     "openrouter",
+    "openai",
+    "codex",
     "ai"
   ],
   "main": "./dist/extension.js",
@@ -49,6 +51,31 @@
       {
         "command": "gitCommitPlanner.clearOpenRouterApiKey",
         "title": "Clear OpenRouter API Key",
+        "category": "Git Commit Planner"
+      },
+      {
+        "command": "gitCommitPlanner.codexSignIn",
+        "title": "Sign in to Codex with ChatGPT",
+        "category": "Git Commit Planner"
+      },
+      {
+        "command": "gitCommitPlanner.codexSignOut",
+        "title": "Sign out of Codex",
+        "category": "Git Commit Planner"
+      },
+      {
+        "command": "gitCommitPlanner.codexStatus",
+        "title": "Show Codex Account Status",
+        "category": "Git Commit Planner"
+      },
+      {
+        "command": "gitCommitPlanner.selectCodexModel",
+        "title": "Select Codex Model",
+        "category": "Git Commit Planner"
+      },
+      {
+        "command": "gitCommitPlanner.selectCodexReasoningEffort",
+        "title": "Select Codex Reasoning Effort",
         "category": "Git Commit Planner"
       },
       {
@@ -227,6 +254,21 @@
         },
         {
           "command": "gitCommitPlanner.clearOpenRouterApiKey"
+        },
+        {
+          "command": "gitCommitPlanner.codexSignIn"
+        },
+        {
+          "command": "gitCommitPlanner.codexSignOut"
+        },
+        {
+          "command": "gitCommitPlanner.codexStatus"
+        },
+        {
+          "command": "gitCommitPlanner.selectCodexModel"
+        },
+        {
+          "command": "gitCommitPlanner.selectCodexReasoningEffort"
         }
       ]
     },
@@ -237,10 +279,11 @@
           "type": "string",
           "scope": "resource",
           "enum": [
-            "openrouter"
+            "openrouter",
+            "codex"
           ],
           "default": "openrouter",
-          "description": "Provider used to generate commit messages."
+          "description": "Provider used to generate commit messages. Codex uses the local Codex App Server and ChatGPT sign-in."
         },
         "gitCommitPlanner.openRouter.baseUrl": {
           "type": "string",
@@ -265,6 +308,24 @@
           "scope": "resource",
           "default": "Git Commit Planner VS Code Extension",
           "description": "Optional X-Title header value sent to OpenRouter."
+        },
+        "gitCommitPlanner.codex.command": {
+          "type": "string",
+          "scope": "resource",
+          "default": "codex",
+          "description": "Codex CLI command used to start the local Codex App Server."
+        },
+        "gitCommitPlanner.codex.model": {
+          "type": "string",
+          "scope": "resource",
+          "default": "",
+          "markdownDescription": "Codex model id. Leave blank to use the Codex default. Run **Git Commit Planner: Select Codex Model** from the Command Palette to choose from models available to your account."
+        },
+        "gitCommitPlanner.codex.reasoningEffort": {
+          "type": "string",
+          "scope": "resource",
+          "default": "",
+          "markdownDescription": "Optional reasoning effort for the selected Codex model. Leave blank to use the model default. Run **Git Commit Planner: Select Codex Reasoning Effort** from the Command Palette to choose a supported value."
         },
         "gitCommitPlanner.format": {
           "type": "string",
@@ -344,7 +405,7 @@
           "default": 0.2,
           "minimum": 0,
           "maximum": 2,
-          "description": "Sampling temperature for the provider request."
+          "description": "OpenRouter sampling temperature. Codex uses the selected model defaults."
         },
         "gitCommitPlanner.maxOutputTokens": {
           "type": "number",
@@ -352,7 +413,7 @@
           "default": 800,
           "minimum": 50,
           "maximum": 128000,
-          "description": "Maximum output tokens for the generated commit message."
+          "description": "Maximum OpenRouter output tokens for the generated commit message. Codex uses the selected model defaults."
         },
         "gitCommitPlanner.maxPlanOutputTokens": {
           "type": "number",
@@ -360,7 +421,7 @@
           "default": 32000,
           "minimum": 1000,
           "maximum": 128000,
-          "description": "Maximum output tokens for Commit Planner JSON. Large plans need room for every planned commit and file path."
+          "description": "Maximum OpenRouter output tokens for Commit Planner JSON. Large plans need room for every planned commit and file path. Codex uses the selected model defaults."
         },
         "gitCommitPlanner.debugLogging": {
           "type": "boolean",
@@ -374,6 +435,7 @@
   "scripts": {
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
+    "test": "bun test",
     "package": "bun run compile && vsce package"
   },
   "devDependencies": {

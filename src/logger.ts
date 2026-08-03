@@ -23,7 +23,7 @@ export function createLogger(output: vscode.OutputChannel): Logger {
     },
     text(title: string, value: string) {
       output.appendLine(`${title}:`);
-      output.appendLine(value || '[empty]');
+      output.appendLine(redactSecrets(value || '[empty]'));
     },
     error(error: unknown) {
       const message = error instanceof Error ? error.stack ?? error.message : String(error);
@@ -38,6 +38,8 @@ function timestamp(): string {
 
 function redactSecrets(value: string): string {
   return value
-    .replace(/Bearer\s+sk-or-[A-Za-z0-9._-]+/g, 'Bearer [REDACTED_OPENROUTER_KEY]')
-    .replace(/sk-or-[A-Za-z0-9._-]+/g, '[REDACTED_OPENROUTER_KEY]');
+    .replace(/(Authorization\s*:\s*Bearer\s+)[^\s"']+/gi, '$1[REDACTED_TOKEN]')
+    .replace(/Bearer\s+[A-Za-z0-9._~+/=-]+/gi, 'Bearer [REDACTED_TOKEN]')
+    .replace(/\bsk-or-[A-Za-z0-9._-]+\b/g, '[REDACTED_OPENROUTER_KEY]')
+    .replace(/\bsk-[A-Za-z0-9._-]+\b/g, '[REDACTED_OPENAI_KEY]');
 }

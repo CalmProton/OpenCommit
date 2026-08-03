@@ -1,6 +1,6 @@
 # Git Commit Planner
 
-VS Code extension for generating AI Git commit messages and planning clean multi-commit changes, powered by OpenRouter API.
+VS Code extension for generating AI Git commit messages and planning clean multi-commit changes, powered by OpenRouter or Codex.
 
 ## Features
 
@@ -8,7 +8,8 @@ VS Code extension for generating AI Git commit messages and planning clean multi
 - Prefers staged changes when any are present.
 - Falls back to unstaged and untracked changes.
 - Writes the generated message into the built-in Git commit message input.
-- Stores the OpenRouter API key in VS Code SecretStorage.
+- Supports OpenRouter API keys and ChatGPT sign-in through the local Codex App Server.
+- Does not store ChatGPT or Codex tokens in the extension.
 - Supports workspace settings in `.vscode/settings.json`.
 - Writes generation summaries to the `Git Commit Planner` output channel, with optional verbose diagnostics.
 - Generates Conventional Commits messages by default, such as `fix(api): correct pagination offset`.
@@ -27,6 +28,11 @@ VS Code extension for generating AI Git commit messages and planning clean multi
 - `Git Commit Planner: Remove Commit Group`
 - `Git Commit Planner: Set OpenRouter API Key`
 - `Git Commit Planner: Clear OpenRouter API Key`
+- `Git Commit Planner: Sign in to Codex with ChatGPT`
+- `Git Commit Planner: Sign out of Codex`
+- `Git Commit Planner: Show Codex Account Status`
+- `Git Commit Planner: Select Codex Model`
+- `Git Commit Planner: Select Codex Reasoning Effort`
 
 ## Settings
 
@@ -34,6 +40,9 @@ Example `.vscode/settings.json`:
 
 ```json
 {
+  "gitCommitPlanner.provider": "codex",
+  "gitCommitPlanner.codex.model": "",
+  "gitCommitPlanner.codex.reasoningEffort": "",
   "gitCommitPlanner.openRouter.model": "openrouter/auto",
   "gitCommitPlanner.format": "conventional",
   "gitCommitPlanner.includeBody": "auto",
@@ -49,11 +58,13 @@ Example `.vscode/settings.json`:
 }
 ```
 
-Do not store API keys in workspace settings. Run `Git Commit Planner: Set OpenRouter API Key` instead.
+Do not store API keys in workspace settings. Run `Git Commit Planner: Set OpenRouter API Key` instead. For Codex, install the Codex CLI, select `codex` as the provider, and run `Git Commit Planner: Sign in to Codex with ChatGPT`.
+
+When `gitCommitPlanner.provider` is `codex`, leave `gitCommitPlanner.codex.model` empty to use the Codex default. Run `Git Commit Planner: Select Codex Model` to read the current model list from Codex and save a model for the selected workspace. Model availability depends on the signed-in account. Run `Git Commit Planner: Select Codex Reasoning Effort` to choose a reasoning effort supported by the selected model. Leave it empty to use the model default.
 
 `gitCommitPlanner.format` defaults to `conventional`. Set it to `simple` or `custom` only if a workspace needs a different style.
 
-The extension disables reasoning tokens by default because commit messages do not need hidden reasoning budgets. If OpenRouter still returns no message content, try increasing `gitCommitPlanner.maxOutputTokens` or choose a concrete non-reasoning model instead of `openrouter/auto`. Commit Planner uses `gitCommitPlanner.maxPlanOutputTokens` because large plans need more room for JSON file lists.
+For OpenRouter, the extension disables reasoning tokens by default because commit messages do not need hidden reasoning budgets. If OpenRouter still returns no message content, try increasing `gitCommitPlanner.maxOutputTokens` or choose a concrete non-reasoning model instead of `openrouter/auto`. For Codex, leave `gitCommitPlanner.codex.reasoningEffort` empty to use the selected model default. Commit Planner uses `gitCommitPlanner.maxPlanOutputTokens` because large plans need more room for JSON file lists.
 
 ## Conventional Commits
 
@@ -61,11 +72,11 @@ Git Commit Planner follows the [Conventional Commits 1.0.0 specification](https:
 
 ## Privacy
 
-Git Commit Planner reads Git diffs from the selected repository only when you run `Git Commit Planner: Generate`. The diff and prompt are sent to the configured OpenRouter API endpoint to generate the commit message. Your OpenRouter API key is stored in VS Code SecretStorage and is not written to workspace settings.
+Git Commit Planner reads Git diffs from the selected repository only when you run a generation command. With OpenRouter, the diff and prompt are sent to the configured OpenRouter API endpoint. Your OpenRouter API key is stored in VS Code SecretStorage and is not written to workspace settings. With Codex, the extension sends the prompt through the local Codex App Server. Codex handles ChatGPT authentication and account tokens; the extension does not read or store them. Codex turns use read-only sandbox access and are ephemeral.
 
 ## Large Changes
 
-The extension does not fetch OpenRouter model metadata. Instead, it assumes a configurable context window:
+The extension does not fetch OpenRouter model metadata. For OpenRouter, it assumes a configurable context window:
 
 - `gitCommitPlanner.modelContextTokens`: default `200000`
 - `gitCommitPlanner.maxPromptContextRatio`: default `0.6`
@@ -79,7 +90,7 @@ Use `Git Commit Planner: Plan Commits` or the `Commit Planner` Source Control vi
 
 The planner requests up to `gitCommitPlanner.maxPlanOutputTokens` output tokens, defaulting to `32000`, so very large plans have room to return complete JSON. This value is also reserved from the prompt budget before diff compaction.
 
-If the model returns an incomplete plan, Git Commit Planner asks it to repair the plan using the exact missing, duplicate, and unknown file lists. If repair still fails, Git Commit Planner completes the plan locally by preserving valid groups and adding any remaining files to related or fallback groups marked as needing message review.
+If the provider returns an incomplete plan, Git Commit Planner asks it to repair the plan using the exact missing, duplicate, and unknown file lists. If repair still fails, Git Commit Planner completes the plan locally by preserving valid groups and adding any remaining files to related or fallback groups marked as needing message review.
 
 After a plan is generated, you can move files between commit groups with drag and drop or `Git Commit Planner: Move File to Commit`, edit commit messages, regenerate individual messages, add empty commit groups, or remove commit groups. `Git Commit Planner: Commit Plan` rechecks that the index is clean and the working tree has not changed since planning, then stages and commits each group in order.
 
@@ -109,10 +120,10 @@ Enable verbose diagnostics with:
 
 Debug logging additionally includes:
 
-- diff sent to OpenRouter
-- prompt messages sent to OpenRouter
-- redacted OpenRouter request metadata
-- raw OpenRouter response body
+- diff sent to the selected provider
+- prompt messages sent to the selected provider
+- redacted provider request metadata
+- provider response details
 - extracted model text
 - final sanitized commit message
 
@@ -121,6 +132,9 @@ Debug logging additionally includes:
 ```bash
 bun install
 bun run compile
+bun test
 ```
+
+Codex support requires a working `codex` command. Set `gitCommitPlanner.codex.command` to the full executable path when `codex` is not available on PATH.
 
 Press `F5` in VS Code to launch an Extension Development Host.
