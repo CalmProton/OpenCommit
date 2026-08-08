@@ -2,6 +2,8 @@
 
 VS Code extension that generates Git commit messages and plans multi-commit changes with OpenRouter, Codex, or OpenCode.
 
+[Install Git Commit Planner](vscode:extension/MadElectron.git-commit-planner)
+
 ![Git Commit Planner preview](./docs/commit-planner-preview.png)
 
 ## Features
